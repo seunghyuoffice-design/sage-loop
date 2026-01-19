@@ -22,7 +22,7 @@ import yaml
 
 # 상태 파일 경로 (stop-hook.sh 호환)
 STATE_DIR = Path(os.environ.get("SAGE_STATE_DIR", "/tmp"))
-CONFIG_PATH = Path(__file__).resolve().parents[1] / "config.yaml"
+CONFIG_PATH = Path(__file__).resolve().parent / "config.yaml"
 
 # 역할별 설명 (TodoWrite용)
 ROLE_DESCRIPTIONS = {

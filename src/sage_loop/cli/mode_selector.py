@@ -80,7 +80,7 @@ def main():
     parser.add_argument("text", nargs="?", help="작업 설명 텍스트")
     parser.add_argument(
         "--config",
-        default=str(Path(__file__).resolve().parents[1] / "config.yaml"),
+        default=str(Path(__file__).resolve().parent / "config.yaml"),
         help="Sage config.yaml 경로",
     )
     parser.add_argument("--list", action="store_true", help="모드 목록 출력")

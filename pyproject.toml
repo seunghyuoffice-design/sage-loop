@@ -22,8 +22,16 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest", "ruff"]
 
+[project.scripts]
+sage-orchestrator = "sage_loop.cli.orchestrator:main"
+sage-mode = "sage_loop.cli.mode_selector:main"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/sage_loop"]
+artifacts = ["*.yaml"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"skills" = "sage_loop/skills"
 
 [tool.hatch.build.targets.sdist]
-include = ["src/sage_loop"]
+include = ["src/sage_loop", "skills"]
