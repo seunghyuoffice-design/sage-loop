@@ -24,6 +24,28 @@ import yaml
 STATE_DIR = Path(os.environ.get("SAGE_STATE_DIR", "/tmp"))
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "config.yaml"
 
+# 역할별 설명 (TodoWrite용)
+ROLE_DESCRIPTIONS = {
+    "ideator": ("아이디어 생성", "아이디어 생성 중"),
+    "analyst": ("분석/선별", "분석 중"),
+    "critic": ("위험/결함 비판", "비판 검토 중"),
+    "censor": ("RULES 사전 봉쇄", "규칙 검증 중"),
+    "academy": ("학술 자문", "학술 자문 중"),
+    "architect": ("설계 수립", "설계 중"),
+    "left-state-councilor": ("내정 검토", "내정 검토 중"),
+    "right-state-councilor": ("실무 검토", "실무 검토 중"),
+    "sage": ("최종 승인", "최종 승인 중"),
+    "executor": ("구현", "구현 중"),
+    "inspector": ("감찰", "감찰 중"),
+    "validator": ("검증", "검증 중"),
+    "historian": ("기록", "기록 중"),
+    "reflector": ("회고", "회고 중"),
+    "improver": ("개선", "개선 중"),
+    "feasibility-checker": ("실현 가능성 검증", "가능성 검증 중"),
+    "constraint-enforcer": ("제약 조건 강제", "제약 검증 중"),
+    "policy-keeper": ("정책 관리", "정책 검토 중"),
+}
+
 
 def get_session_id() -> str:
     """세션 ID 획득 또는 생성"""
@@ -143,6 +165,19 @@ def check_branch(role: str, result: str, state: dict, config: dict) -> Optional[
     return None
 
 
+def generate_todos(roles: list) -> list:
+    """체인 역할 목록으로 TodoWrite용 JSON 생성"""
+    todos = []
+    for i, role in enumerate(roles, 1):
+        desc, active = ROLE_DESCRIPTIONS.get(role, (role, f"{role} 실행 중"))
+        todos.append({
+            "content": f"Phase {i}: {role} - {desc}",
+            "status": "pending",
+            "activeForm": active
+        })
+    return todos
+
+
 def main():
     parser = argparse.ArgumentParser(description="Sage Orchestrator")
     parser.add_argument("task", nargs="?", help="작업 설명")
@@ -256,9 +291,15 @@ def main():
         # 첫 번째 역할
         next_role = get_next_role(state, config)
 
+        # 출력
         print(f"CHAIN: {chain}")
         if next_role:
             print(f"NEXT: {next_role}")
+
+        # TODO JSON 출력 (Claude가 TodoWrite 호출하도록 강제)
+        todos = generate_todos(roles)
+        print("TODO_REQUIRED:")
+        print(json.dumps({"todos": todos}, ensure_ascii=False))
         return
 
     parser.print_help()
