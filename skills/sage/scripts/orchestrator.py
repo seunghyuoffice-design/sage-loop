@@ -12,6 +12,7 @@ import argparse
 import hashlib
 import json
 import os
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -181,6 +182,12 @@ def main():
     if args.complete:
         role = args.complete
 
+        # 상태 검증: 활성 세션이 있어야 함
+        chain_roles = state.get("chain_roles", [])
+        if not chain_roles or not state.get("active", False):
+            print("ERROR: 활성 세션 없음. 먼저 작업을 시작하세요.")
+            sys.exit(1)
+
         # stop-hook.sh 호환: completed_roles
         completed_roles = state.get("completed_roles", state.get("completed", []))
         if role not in completed_roles:
@@ -195,15 +202,27 @@ def main():
             print(f"BRANCH: {branch_to}")
             return
 
-        # 다음 역할 확인
+        # 다음 역할 확인 및 current_role 업데이트
         next_role = get_next_role(state, config)
         state["current_role"] = next_role
+
+        # 모든 역할 완료 시 exit_signal 설정 (chain_roles 기준으로 검증)
+        all_completed = len(completed_roles) >= len(chain_roles)
+        if next_role is None and all_completed:
+            state["exit_signal"] = True
+            state["exit_reason"] = "모든 역할 완료"
+            state["active"] = False
+
         save_state(state)
 
         if next_role:
             print(f"NEXT: {next_role}")
-        else:
+        elif all_completed:
             print("APPROVE")
+        else:
+            # 비정상: 다음 역할 없는데 완료도 아님
+            print(f"ERROR: 상태 불일치. completed={len(completed_roles)}, total={len(chain_roles)}")
+            sys.exit(1)
         return
 
     # 새 작업 시작
@@ -243,6 +262,7 @@ def main():
         return
 
     parser.print_help()
+    sys.exit(1)
 
 
 if __name__ == "__main__":
