@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sage-loop"
-version = "1.0.0"
+version = "1.1.0"
 description = "15-phase autonomous agent orchestration system for Claude Code"
 readme = "README.md"
 license = "MIT"
@@ -23,7 +23,7 @@ dependencies = [
 dev = ["pytest", "ruff"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/sage"]
+packages = ["src/sage_loop"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/sage"]
+include = ["src/sage_loop"]

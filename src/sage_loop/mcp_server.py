@@ -27,15 +27,14 @@ except ImportError:
     print("MCP SDK not installed. Run: pip install mcp", file=sys.stderr)
     sys.exit(1)
 
-# Sage 모듈 (경로 추가)
-sys.path.insert(0, "/home/rovers/Dyarchy-v3")
-from src.sage.schemas import (
+# Sage 모듈 (상대 경로)
+from .schemas import (
     ChainType,
     ExecutionMode,
     SessionStatus,
 )
-from src.sage.services.state_service import StateService
-from src.sage.engine.chain_executor import ChainExecutor
+from .services.state_service import StateService
+from .engine.chain_executor import ChainExecutor
 
 # 서버 인스턴스
 server = Server("sage-orchestrator")
