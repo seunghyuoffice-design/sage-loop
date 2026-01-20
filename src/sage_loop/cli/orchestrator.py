@@ -309,7 +309,9 @@ def main():
                     print(f"BRANCH: {branch_active}")
                     return
                 else:
-                    # 분기 반복
+                    # 분기 반복 (카운트 증가)
+                    branch_loops[branch_key] = current_loops + 1
+                    state["branch_loops"] = branch_loops
                     save_state(state)
                     print(f"BRANCH_RETRY: {branch_active}")
                     print(f"LOOP: {current_loops + 1}/{max_loops}")
