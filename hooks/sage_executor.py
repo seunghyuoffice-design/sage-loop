@@ -24,14 +24,14 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.sage.schemas import (
+from sage_loop.schemas import (
     ExecutionMode,
     SessionStatus,
     RoleStatus,
 )
-from src.sage.services.state_service import StateService
-from src.sage.engine.chain_executor import ChainExecutor
-from src.sage.engine.role_runner import RoleRunner
+from sage_loop.services.state_service import StateService
+from sage_loop.engine.chain_executor import ChainExecutor
+from sage_loop.engine.role_runner import RoleRunner
 
 # 파일 시스템 상태 경로 (stop-hook.sh와 호환)
 STATE_DIR = Path(os.environ.get("SAGE_STATE_DIR", "/tmp"))
