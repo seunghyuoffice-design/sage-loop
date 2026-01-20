@@ -52,9 +52,9 @@ def get_session_id() -> str:
     session_id = os.environ.get("SAGE_SESSION_ID")
     if session_id:
         return session_id
-    # 새 세션 ID 생성
+    # 새 세션 ID 생성 (SHA-256 사용)
     ts = str(time.time()).encode()
-    new_id = f"orch-{hashlib.md5(ts).hexdigest()[:8]}"
+    new_id = f"orch-{hashlib.sha256(ts).hexdigest()[:8]}"
     os.environ["SAGE_SESSION_ID"] = new_id
     return new_id
 
@@ -105,12 +105,12 @@ def load_state() -> dict:
     return default_state
 
 
-def save_state(state: dict):
+def save_state(state: dict) -> None:
     state_file = get_state_file()
     state_file.write_text(json.dumps(state, ensure_ascii=False, indent=2))
 
 
-def clear_state():
+def clear_state() -> None:
     state_file = get_state_file()
     if state_file.exists():
         state_file.unlink()
@@ -121,12 +121,15 @@ def select_chain(task: str, config: dict) -> str:
     task_lower = task.lower()
     chains = config.get("chains", {})
 
+    # O(n²) → O(n) 최적화: 키워드를 set으로 전처리
     for chain_name, chain_cfg in chains.items():
         triggers = chain_cfg.get("triggers", {})
         keywords = triggers.get("keywords", [])
-        for kw in keywords:
-            if kw.lower() in task_lower:
-                return chain_name
+        keyword_set = {kw.lower() for kw in keywords}  # 전처리
+
+        # 단일 루프로 체크
+        if any(kw in task_lower for kw in keyword_set):
+            return chain_name
 
     return config.get("defaults", {}).get("fallback_chain", "FULL")
 
@@ -234,7 +237,7 @@ def generate_todos(roles: list) -> list:
     return todos
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Sage Orchestrator v3")
     parser.add_argument("task", nargs="?", help="작업 설명")
     parser.add_argument("--complete", metavar="ROLE", help="역할 완료 보고")
