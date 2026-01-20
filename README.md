@@ -1,36 +1,43 @@
 # Sage Loop
 
-A 15-phase autonomous agent orchestration system for Claude Code, inspired by the Korean Joseon Dynasty's Uijeongbu (의정부) deliberation system.
+A 17-phase autonomous agent orchestration system for Claude Code, inspired by the Korean Joseon Dynasty's Uijeongbu (의정부) deliberation system.
 
 ## Overview
 
 Sage Loop implements a hierarchical decision-making chain where each role has specific responsibilities, enabling thorough analysis, critique, and execution of complex tasks.
 
+The Sage (영의정) appears **three times**, following the historical Uijeongbu deliberation flow:
+1. **Phase 1**: Accept petition and initiate review ("검토하라")
+2. **Phase 10**: Authorize execution after deliberation ("시행하라")
+3. **Phase 14**: Final approval after validation ("완료 확인")
+
 ```
-Ideator → Analyst → Critic → Censor → Academy → Architect
-    → LeftState → RightState → Sage → Executor
-    → Inspector → Validator → Historian → Reflector → Improver
+Sage(접수) → Ideator → Analyst → Critic → Censor → Academy → Architect
+    → LeftState → RightState → Sage(허가) → Executor
+    → Inspector → Validator → Sage(결재) → Historian → Reflector → Improver
 ```
 
-## Roles (15 Phases)
+## Roles (17 Phases)
 
 | Phase | Role | Korean | Function |
 |-------|------|--------|----------|
-| 1 | Ideator | 현인 | Generate 50+ ideas |
-| 2 | Analyst | 선지자 | Filter to 5 best ideas |
-| 3 | Critic | 비조 | Identify risks (no solutions) |
-| 4 | Censor | 파수꾼 | Block rule violations |
-| 5 | Academy | 대제학 | Provide academic guidance |
-| 6 | Architect | 장인 | Design implementation |
-| 7 | LeftState | 좌의정 | Internal policy review |
-| 8 | RightState | 우의정 | Technical/practical review |
-| 9 | Sage | 영의정 | Final approval authority |
-| 10 | Executor | 실행관 | Implement the design |
-| 11 | Inspector | 감찰관 | Inspect execution |
-| 12 | Validator | 검증관 | Final quality gate |
-| 13 | Historian | 역사관 | Record decisions |
-| 14 | Reflector | 회고관 | Gather feedback |
-| 15 | Improver | 개선관 | Propose improvements |
+| 1 | **Sage** | 영의정 | **Accept petition (1st)** - "검토하라" |
+| 2 | Ideator | 현인 | Generate 50+ ideas |
+| 3 | Analyst | 선지자 | Filter to 5 best ideas |
+| 4 | Critic | 비조 | Identify risks (no solutions) |
+| 5 | Censor | 파수꾼 | Block rule violations |
+| 6 | Academy | 대제학 | Provide academic guidance |
+| 7 | Architect | 장인 | Design implementation |
+| 8 | LeftState | 좌의정 | Internal policy review (이조/호조/예조) |
+| 9 | RightState | 우의정 | Technical/practical review (병조/형조/공조) |
+| 10 | **Sage** | 영의정 | **Execution authorization (2nd)** - "시행하라" |
+| 11 | Executor | 실행관 | Implement the design |
+| 12 | Inspector | 감찰관 | Inspect execution |
+| 13 | Validator | 검증관 | Quality gate |
+| 14 | **Sage** | 영의정 | **Final approval (3rd)** - "완료 확인" |
+| 15 | Historian | 역사관 | Record decisions |
+| 16 | Reflector | 회고관 | Gather feedback |
+| 17 | Improver | 개선관 | Propose improvements |
 
 ## Chain Types
 

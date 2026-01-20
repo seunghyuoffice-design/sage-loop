@@ -1,24 +1,27 @@
 # Sage 설정
 
-# 체인 정의 (CLAUDE.md SAGE_LOOP 기준, 15단계)
+# 체인 정의 (CLAUDE.md SAGE_LOOP 기준, 17단계)
+# 영의정(Sage)이 3회 호출: 안건 접수(Phase 1) + 실행 허가(Phase 10) + 최종 결재(Phase 14)
 chains:
   FULL:
     roles:
-      - ideator           # Phase 1: 아이디어 생성
-      - analyst           # Phase 2: 분석/선별
-      - critic            # Phase 3: 위험/결함 비판
-      - censor            # Phase 4: RULES 사전 봉쇄
-      - academy           # Phase 5: 학술 자문
-      - architect         # Phase 6: 설계 수립
-      - left-state-councilor   # Phase 7: 내정 검토
-      - right-state-councilor  # Phase 8: 실무 검토
-      - sage              # Phase 9: 최종 승인 (영의정)
-      - executor          # Phase 10: 구현
-      - inspector         # Phase 11: 감찰
-      - validator         # Phase 12: 검증
-      - historian         # Phase 13: 기록
-      - reflector         # Phase 14: 회고
-      - improver          # Phase 15: 개선
+      - sage              # Phase 1: 안건 접수 (영의정 1차) - "검토하라"
+      - ideator           # Phase 2: 아이디어 생성
+      - analyst           # Phase 3: 분석/선별
+      - critic            # Phase 4: 위험/결함 비판
+      - censor            # Phase 5: RULES 사전 봉쇄
+      - academy           # Phase 6: 학술 자문
+      - architect         # Phase 7: 설계 수립
+      - left-state-councilor   # Phase 8: 내정 검토 (이조/호조/예조)
+      - right-state-councilor  # Phase 9: 실무 검토 (병조/형조/공조)
+      - sage              # Phase 10: 실행 허가 (영의정 2차) - "시행하라"
+      - executor          # Phase 11: 구현
+      - inspector         # Phase 12: 감찰
+      - validator         # Phase 13: 검증
+      - sage              # Phase 14: 최종 결재 (영의정 3차) - "완료 확인"
+      - historian         # Phase 15: 기록
+      - reflector         # Phase 16: 회고
+      - improver          # Phase 17: 개선
     triggers:
       keywords: [새로운, 개발, 구현, 기능, 추가, 만들어]
       complexity: [중간, 복잡]
