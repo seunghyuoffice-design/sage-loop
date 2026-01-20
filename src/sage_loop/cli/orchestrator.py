@@ -165,13 +165,29 @@ def get_branch_config(role: str, config: dict, chain_name: str) -> Optional[dict
 
 # v3: 분기 조건 체크
 def check_branch_condition(role: str, result: str, config: dict, chain_name: str) -> Optional[dict]:
-    """결과가 분기 조건을 만족하면 분기 설정 반환"""
+    """
+    결과가 분기 조건을 만족하면 분기 설정 반환
+
+    condition은 문자열 또는 배열 지원:
+    - 문자열: "reject" → result에 "reject" 포함 시 분기
+    - 배열: ["reject", "반려", "거절"] → 하나라도 포함 시 분기
+    """
     branch_config = get_branch_config(role, config, chain_name)
     if not branch_config:
         return None
 
     condition = branch_config.get("condition", "")
-    if condition.lower() in result.lower():
+    result_lower = result.lower()
+
+    # 배열 지원
+    if isinstance(condition, list):
+        for cond in condition:
+            if cond.lower() in result_lower:
+                return branch_config
+        return None
+
+    # 문자열
+    if condition.lower() in result_lower:
         return branch_config
 
     return None
@@ -243,6 +259,16 @@ def main():
             completed_indices = state.get("completed_indices", [])
             chain_roles = state.get("chain_roles", [])
             branch_active = state.get("branch_active")
+
+            # v3.1: 종료 상태 확인
+            if state.get("exit_signal") and not state.get("active", True):
+                exit_reason = state.get("exit_reason", "체인 종료")
+                completed_names = [chain_roles[i] for i in completed_indices if i < len(chain_roles)]
+                print(f"CHAIN: {chain_type}")
+                print(f"STATUS: exited")
+                print(f"REASON: {exit_reason}")
+                print(f"COMPLETED: {', '.join(completed_names) or 'none'}")
+                return
 
             print(f"CHAIN: {chain_type}")
             print(f"PHASE: {len(completed_indices)}/{len(chain_roles)}")

@@ -27,30 +27,30 @@ chains:
       complexity: [중간, 복잡]
       risk: [보통, 높음]
     branches:
-      # 분기 조건: result에 해당 키워드 포함 시 분기 발생
+      # 분기 조건: result에 해당 키워드 포함 시 분기 발생 (배열/문자열 지원)
       - from: critic
         to: ideator
-        condition: "reject"  # critic 반려 → ideator 재검토
+        condition: ["reject", "반려", "거절", "재검토", "보완필요"]
         max_loops: 2
       - from: analyst
         to: feasibility-checker
-        condition: "uncertain"  # 불확실 → 실현 가능성 검증
+        condition: ["uncertain", "불확실", "추가검토", "확인필요", "판단불가"]
         max_loops: 3
       - from: left-state-councilor
         to: architect
-        condition: "reject"  # 내정 반려 → 재설계
+        condition: ["reject", "반려", "재설계", "수정필요"]
         max_loops: 2
       - from: right-state-councilor
         to: architect
-        condition: "reject"  # 실무 반려 → 재설계
+        condition: ["reject", "반려", "재설계", "수정필요"]
         max_loops: 2
       - from: inspector
         to: executor
-        condition: "reject"  # 감찰 반려 → 재구현
+        condition: ["reject", "반려", "재구현", "수정필요", "결함발견"]
         max_loops: 2
       - from: validator
         to: executor
-        condition: "reject"  # 검증 실패 → 재구현
+        condition: ["reject", "반려", "테스트실패", "검증실패", "fail"]
         max_loops: 2
     # 즉시 종료 조건 (EXIT 분기)
     exit_conditions:
