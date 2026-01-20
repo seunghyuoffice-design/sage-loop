@@ -15,7 +15,15 @@ v2 Components (컨텍스트 효율화):
 
 from .branch_handler import BranchHandler
 from .chain_executor import ChainExecutor
-from .compact_checkpoint import CompactCheckpoint, should_compact, create_compact_block
+from .compact_checkpoint import (
+    CompactCheckpoint,
+    SageCompactState,
+    should_compact,
+    create_compact_block,
+    export_compact_yaml,
+    restore_from_yaml,
+    get_compact_yaml_for_session,
+)
 from .context_compactor import ContextCompactor, compact_output, prepare_role_input
 from .parallel_task_runner import ParallelTaskRunner, run_parallel_tasks, get_parallel_roles_for
 from .role_runner import RoleRunner
@@ -42,4 +50,9 @@ __all__ = [
     "create_compact_block",
     "run_parallel_tasks",
     "get_parallel_roles_for",
+    # Claude Code Integration
+    "SageCompactState",
+    "export_compact_yaml",
+    "restore_from_yaml",
+    "get_compact_yaml_for_session",
 ]
