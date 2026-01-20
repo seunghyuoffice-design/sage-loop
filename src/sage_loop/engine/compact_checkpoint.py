@@ -8,6 +8,10 @@ COMPACT CONTEXT v2 포맷 사용.
     - architect/executor 역할 완료 후
     - 분기 완료 후
     - 컨텍스트 50K 토큰 초과 시
+
+Claude Code Integration:
+    - export_compact_yaml(): Claude Code /compact 명령어용 YAML 생성
+    - restore_from_yaml(): YAML에서 상태 복원
 """
 
 import json
@@ -15,7 +19,9 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
+
+import yaml
 
 from ..services.state_service import StateService
 
@@ -332,3 +338,217 @@ def create_compact_block(
         reason="manual",
     )
     return data.compact_block
+
+
+# ═══════════════════════════════════════════════════════════════
+# Claude Code Integration - YAML Export/Restore
+# ═══════════════════════════════════════════════════════════════
+
+
+@dataclass
+class SageCompactState:
+    """Claude Code compact용 Sage Loop 상태"""
+
+    session_id: str
+    phase: int
+    current_role: str
+    original_request: str
+    sage_decisions: dict[str, str]  # phase -> decision
+    completed: dict[str, str]  # role -> summary
+    pending: list[str]
+    files_modified: list[str]
+    key_conclusions: list[str]
+    timestamp: str
+
+
+# Phase 번호 매핑
+ROLE_TO_PHASE = {
+    "sage-intake": 1,
+    "ideator": 2,
+    "analyst": 3,
+    "critic": 4,
+    "censor": 5,
+    "academy": 6,
+    "architect": 7,
+    "left-state-councilor": 8,
+    "right-state-councilor": 9,
+    "sage-approval": 10,
+    "executor": 11,
+    "inspector": 12,
+    "validator": 13,
+    "sage-final": 14,
+    "historian": 15,
+    "reflector": 16,
+    "improver": 17,
+}
+
+# 전체 체인 순서
+FULL_CHAIN = [
+    "sage-intake",
+    "ideator",
+    "analyst",
+    "critic",
+    "censor",
+    "academy",
+    "architect",
+    "left-state-councilor",
+    "right-state-councilor",
+    "sage-approval",
+    "executor",
+    "inspector",
+    "validator",
+    "sage-final",
+    "historian",
+    "reflector",
+    "improver",
+]
+
+
+def export_compact_yaml(
+    session_id: str,
+    current_role: str,
+    original_request: str,
+    sage_decisions: dict[str, str],
+    completed_roles: dict[str, str],
+    files_modified: list[str] | None = None,
+    key_conclusions: list[str] | None = None,
+) -> str:
+    """
+    Claude Code /compact 명령어용 YAML 생성
+
+    Args:
+        session_id: 세션 ID
+        current_role: 현재 역할
+        original_request: 사용자 원본 요청
+        sage_decisions: Sage(영의정) 결정사항 {phase: decision}
+        completed_roles: 완료된 역할별 요약 {role: summary}
+        files_modified: 수정된 파일 목록
+        key_conclusions: 핵심 결론 목록
+
+    Returns:
+        YAML 형식 문자열
+
+    Example:
+        >>> yaml_str = export_compact_yaml(
+        ...     session_id="abc12345",
+        ...     current_role="executor",
+        ...     original_request="파이프라인 실패 원인 분석",
+        ...     sage_decisions={"phase_1": "분석 승인", "phase_10": "실행 허가"},
+        ...     completed_roles={"analyst": "pikepdf 오분류 발견", "architect": "3단계 설계"},
+        ... )
+    """
+    phase = ROLE_TO_PHASE.get(current_role, 0)
+
+    # 완료된 역할 목록
+    completed_list = list(completed_roles.keys())
+
+    # 남은 역할 계산
+    try:
+        current_idx = FULL_CHAIN.index(current_role)
+        pending = FULL_CHAIN[current_idx + 1 :]
+    except ValueError:
+        pending = []
+
+    state = SageCompactState(
+        session_id=session_id,
+        phase=phase,
+        current_role=current_role,
+        original_request=original_request[:200],  # 200자 제한
+        sage_decisions=sage_decisions,
+        completed={role: summary[:100] for role, summary in completed_roles.items()},
+        pending=pending,
+        files_modified=files_modified or [],
+        key_conclusions=key_conclusions or [],
+        timestamp=datetime.now().isoformat(),
+    )
+
+    # YAML 구조 생성
+    yaml_data = {
+        "sage_state": {
+            "session_id": state.session_id,
+            "phase": state.phase,
+            "current_role": state.current_role,
+            "original_request": state.original_request,
+            "sage_decisions": state.sage_decisions,
+            "completed": state.completed,
+            "pending": state.pending,
+            "files_modified": state.files_modified,
+            "key_conclusions": state.key_conclusions,
+            "timestamp": state.timestamp,
+        },
+        "compact_instructions": {
+            "priority": "CRITICAL: Sage 결정사항, 현재 Phase, 원본 요청",
+            "restore_after_compact": [
+                "AI-INDEX.md 재참조",
+                "현재 Phase에서 작업 재개",
+                "files_modified 목록 확인",
+            ],
+        },
+    }
+
+    return yaml.dump(
+        yaml_data,
+        allow_unicode=True,
+        default_flow_style=False,
+        sort_keys=False,
+        width=120,
+    )
+
+
+def restore_from_yaml(yaml_str: str) -> SageCompactState | None:
+    """
+    YAML에서 Sage Loop 상태 복원
+
+    Args:
+        yaml_str: export_compact_yaml()로 생성된 YAML 문자열
+
+    Returns:
+        SageCompactState 또는 None (파싱 실패 시)
+    """
+    try:
+        data = yaml.safe_load(yaml_str)
+        if not data or "sage_state" not in data:
+            return None
+
+        state_data = data["sage_state"]
+
+        return SageCompactState(
+            session_id=state_data.get("session_id", ""),
+            phase=state_data.get("phase", 0),
+            current_role=state_data.get("current_role", ""),
+            original_request=state_data.get("original_request", ""),
+            sage_decisions=state_data.get("sage_decisions", {}),
+            completed=state_data.get("completed", {}),
+            pending=state_data.get("pending", []),
+            files_modified=state_data.get("files_modified", []),
+            key_conclusions=state_data.get("key_conclusions", []),
+            timestamp=state_data.get("timestamp", ""),
+        )
+    except yaml.YAMLError as e:
+        logger.error(f"YAML 파싱 실패: {e}")
+        return None
+
+
+def get_compact_yaml_for_session(session_id: str) -> str | None:
+    """
+    세션 ID로 compact YAML 생성 (Redis에서 상태 조회)
+
+    Args:
+        session_id: 세션 ID
+
+    Returns:
+        YAML 문자열 또는 None
+    """
+    checkpoint = CompactCheckpoint()
+    data = checkpoint.load_checkpoint(session_id)
+
+    if not data:
+        return None
+
+    return export_compact_yaml(
+        session_id=data.session_id,
+        current_role=data.current_role,
+        original_request="",  # 체크포인트에서는 원본 요청 없음
+        sage_decisions={},  # 체크포인트에서 추출 필요
+        completed_roles=data.summaries,
+    )
