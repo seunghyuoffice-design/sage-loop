@@ -27,18 +27,39 @@ chains:
       complexity: [중간, 복잡]
       risk: [보통, 높음]
     branches:
+      # 분기 조건: result에 해당 키워드 포함 시 분기 발생
+      - from: critic
+        to: ideator
+        condition: "reject"  # critic 반려 → ideator 재검토
+        max_loops: 2
       - from: analyst
         to: feasibility-checker
-        condition: "feasibility_uncertain"
+        condition: "uncertain"  # 불확실 → 실현 가능성 검증
         max_loops: 3
-      - from: critic
-        to: constraint-enforcer
-        condition: "constraint_violation"
+      - from: left-state-councilor
+        to: architect
+        condition: "reject"  # 내정 반려 → 재설계
         max_loops: 2
-      - from: censor
-        to: policy-keeper
-        condition: "rules_violation"
+      - from: right-state-councilor
+        to: architect
+        condition: "reject"  # 실무 반려 → 재설계
         max_loops: 2
+      - from: inspector
+        to: executor
+        condition: "reject"  # 감찰 반려 → 재구현
+        max_loops: 2
+      - from: validator
+        to: executor
+        condition: "reject"  # 검증 실패 → 재구현
+        max_loops: 2
+    # 즉시 종료 조건 (EXIT 분기)
+    exit_conditions:
+      - role: censor
+        keywords: ["차단", "block", "불가", "금지"]
+        reason: "RULES 위반으로 즉시 종료"
+      - role: sage
+        keywords: ["거부", "reject", "불가", "기각", "반려"]
+        reason: "Sage 거부로 종료"
 
   QUICK:
     roles: [critic, architect, executor, validator, historian]

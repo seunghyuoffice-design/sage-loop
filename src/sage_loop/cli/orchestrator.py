@@ -188,6 +188,23 @@ def check_sage_rejection(role: str, result: str) -> bool:
     return any(kw in result_lower for kw in rejection_keywords)
 
 
+# v3.1: Exit Conditions 체크 (config.yaml에서 로드)
+def check_exit_condition(role: str, result: str, config: dict, chain_name: str) -> Optional[dict]:
+    """즉시 종료 조건 확인"""
+    chains = config.get("chains", {})
+    chain = chains.get(chain_name, {})
+    exit_conditions = chain.get("exit_conditions", [])
+
+    result_lower = result.lower()
+    for cond in exit_conditions:
+        if cond.get("role") == role:
+            keywords = cond.get("keywords", [])
+            if any(kw.lower() in result_lower for kw in keywords):
+                return cond
+
+    return None
+
+
 def generate_todos(roles: list) -> list:
     """체인 역할 목록으로 TodoWrite용 JSON 생성"""
     todos = []
@@ -270,6 +287,18 @@ def main():
             save_state(state)
             print("REJECTED: Sage가 안건을 거부했습니다.")
             print(f"REASON: {args.result}")
+            return
+
+        # === v3.1: Exit Conditions 체크 (config 기반) ===
+        exit_cond = check_exit_condition(role, args.result, config, chain_name)
+        if exit_cond:
+            state["exit_signal"] = True
+            state["exit_reason"] = exit_cond.get("reason", f"{role} 종료 조건 충족")
+            state["active"] = False
+            save_state(state)
+            print(f"REJECTED: {exit_cond.get('reason', '종료 조건 충족')}")
+            print(f"ROLE: {role}")
+            print(f"RESULT: {args.result}")
             return
 
         # === v3: 분기 역할 완료 처리 ===
