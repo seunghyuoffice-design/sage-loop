@@ -149,10 +149,23 @@ if ! python3 "$PROJECT_ROOT/.claude/hooks/circuit_breaker_check.py" 2>>"$ERROR_L
 fi
 
 # ═══════════════════════════════════════════════════════════════
-# 5. 다음 역할 확인 및 Claude에게 신호 전달
+# 5. 현재 역할 자동 완료 처리 (v3)
 # ═══════════════════════════════════════════════════════════════
 
-# 세션 정보 추출
+current_role=$(jq -r '.current_role // ""' "$SESSION_FILE" 2>/dev/null || echo "")
+completed_list=$(jq -r '.completed_roles[]? // empty' "$SESSION_FILE" 2>/dev/null || echo "")
+
+# 현재 역할이 있고 아직 완료되지 않았으면 자동 완료 처리
+if [[ -n "$current_role" ]] && ! echo "$completed_list" | grep -q "^${current_role}#"; then
+  debug_log "Auto-completing role: $current_role"
+  python3 -m sage_loop.cli.orchestrator --complete "$current_role" --result "auto-complete by stop-hook" 2>>"$ERROR_LOG" || true
+fi
+
+# ═══════════════════════════════════════════════════════════════
+# 6. 다음 역할 확인 및 Claude에게 신호 전달
+# ═══════════════════════════════════════════════════════════════
+
+# 세션 정보 재로드 (완료 처리 후)
 next_role=$(python3 "$PROJECT_ROOT/.claude/hooks/role_detector.py" --next 2>/dev/null || echo "")
 current_role=$(jq -r '.current_role // ""' "$SESSION_FILE" 2>/dev/null || echo "")
 chain_type=$(jq -r '.chain_type // "FULL"' "$SESSION_FILE" 2>/dev/null || echo "FULL")
