@@ -1,51 +1,54 @@
 # Sage Loop
 
-A 17-phase autonomous agent orchestration system, inspired by the Korean Joseon Dynasty's Uijeongbu (의정부) deliberation system.
+A 14-phase autonomous agent orchestration system with **parallel execution support**, inspired by the Korean Joseon Dynasty's Uijeongbu (의정부) deliberation system.
 
 ## Overview
 
 Sage Loop implements a hierarchical decision-making chain where each role has specific responsibilities, enabling thorough analysis, critique, and execution of complex tasks.
 
+**v4 Features:**
+- 🔀 **Parallel Execution**: Non-blocking roles run concurrently
+- 🔒 **File Locking**: Thread-safe state management with `fcntl.flock`
+- ⚡ **Atomic Writes**: Corruption-proof state persistence
+
 The Sage (영의정) appears **three times**, following the historical Uijeongbu deliberation flow:
 
 1. **Phase 1**: Accept petition and initiate review ("검토하라")
-2. **Phase 10**: Authorize execution after deliberation ("시행하라")
-3. **Phase 14**: Final approval after validation ("완료 확인")
+2. **Phase 9**: Authorize execution after deliberation ("시행하라")
+3. **Phase 12**: Final approval after validation ("완료 확인")
 
 ```text
 Sage(접수) → Ideator → Analyst → Critic → Censor → Academy → Architect
-    → LeftState → RightState → Sage(허가) → Executor
-    → Inspector → Validator → Sage(결재) → Historian → Reflector → Improver
+    → [LeftState ∥ RightState] → Sage(허가) → Executor
+    → [Inspector ∥ Validator] → Sage(결재) → Historian → [Reflector ∥ Improver]
 ```
 
-## Roles (17 Phases)
+## Roles (14 Phases, 17 Roles)
 
-| Phase | Role | Korean | Function |
-| ----- | ---- | ------ | -------- |
-| 1 | **Sage** | 영의정 | **Accept petition (1st)** - "검토하라" |
-| 2 | Ideator | 현인 | Generate 50+ ideas |
-| 3 | Analyst | 선지자 | Filter to 5 best ideas |
-| 4 | Critic | 비조 | Identify risks (no solutions) |
-| 5 | Censor | 파수꾼 | Block rule violations |
-| 6 | Academy | 대제학 | Provide academic guidance |
-| 7 | Architect | 장인 | Design implementation |
-| 8 | LeftState | 좌의정 | Internal policy review (이조/호조/예조) |
-| 9 | RightState | 우의정 | Technical/practical review (병조/형조/공조) |
-| 10 | **Sage** | 영의정 | **Execution authorization (2nd)** - "시행하라" |
-| 11 | Executor | 실행관 | Implement the design |
-| 12 | Inspector | 감찰관 | Inspect execution |
-| 13 | Validator | 검증관 | Quality gate |
-| 14 | **Sage** | 영의정 | **Final approval (3rd)** - "완료 확인" |
-| 15 | Historian | 역사관 | Record decisions |
-| 16 | Reflector | 회고관 | Gather feedback |
-| 17 | Improver | 개선관 | Propose improvements |
+| Phase | Role | Korean | Function | Type |
+| ----- | ---- | ------ | -------- | ---- |
+| 1 | **Sage** | 영의정 | **Accept petition (1st)** - "검토하라" | Sequential |
+| 2 | Ideator | 현인 | Generate 50+ ideas | Sequential |
+| 3 | Analyst | 선지자 | Filter to 5 best ideas | Sequential |
+| 4 | Critic | 비조 | Identify risks (no solutions) | Sequential |
+| 5 | Censor | 파수꾼 | Block rule violations | Sequential |
+| 6 | Academy | 대제학 | Provide academic guidance | Sequential |
+| 7 | Architect | 장인 | Design implementation | Sequential |
+| 8 | LeftState + RightState | 좌의정 + 우의정 | Policy + Technical review | **Parallel** |
+| 9 | **Sage** | 영의정 | **Execution authorization (2nd)** - "시행하라" | Sequential |
+| 10 | Executor | 실행관 | Implement the design | Sequential |
+| 11 | Inspector + Validator | 감찰관 + 검증관 | Inspect + Quality gate | **Parallel** |
+| 12 | **Sage** | 영의정 | **Final approval (3rd)** - "완료 확인" | Sequential |
+| 13 | Historian | 역사관 | Record decisions | Sequential |
+| 14 | Reflector + Improver | 회고관 + 개선관 | Feedback + Improvements | **Parallel** |
 
 ## Chain Types
 
-- **FULL**: All 17 phases (complex tasks)
-- **QUICK**: Critic → Architect → Executor → Validator → Historian
+- **FULL**: All 14 phases with 3 parallel groups (complex tasks)
+- **QUICK**: Critic → Architect → Executor → [Inspector ∥ Validator] → Historian
 - **REVIEW**: Critic → Validator
 - **DESIGN**: Ideator → Analyst → Critic → Architect
+- **RESEARCH**: Ideator → Analyst → Academy → Historian
 
 ## Installation
 
@@ -132,6 +135,36 @@ models:
 /sage --chain quick "Fix the login bug"
 ```
 
+### CLI (Orchestrator v4)
+
+```bash
+# Start a new chain
+python orchestrator.py "Implement feature X"
+
+# Complete a role
+python orchestrator.py --complete critic --result "pass"
+
+# Complete parallel roles (both at once or separately)
+python orchestrator.py --complete left-state-councilor --result "pass"
+python orchestrator.py --complete right-state-councilor --result "pass"
+
+# Check status
+python orchestrator.py --status
+
+# Reset session
+python orchestrator.py --reset
+```
+
+**Parallel Execution Output:**
+```
+NEXT_PARALLEL: left-state-councilor, right-state-councilor
+# After completing one:
+PARALLEL_PROGRESS: left-state-councilor 완료
+PENDING: right-state-councilor
+# After completing both:
+NEXT: sage
+```
+
 ### Programmatic Usage
 
 ```python
@@ -171,13 +204,15 @@ sage-loop/
 
 ## Key Features
 
+- **Parallel Execution**: Non-blocking roles run concurrently (v4)
+- **Concurrency Safe**: File locking with `fcntl.flock` + atomic writes (v4)
 - **Platform Agnostic**: Core skills work on any LLM platform
 - **Overlay System**: Platform-specific model/thinking configuration
 - **Context Isolation**: Each role runs in isolated context via Task tool
 - **Branching**: Dynamic branching based on role outputs
 - **Circuit Breaker**: Prevents infinite loops
 - **Feedback Loop**: Roles can request re-evaluation
-- **State Persistence**: Redis-backed session state
+- **State Persistence**: File-based with atomic updates
 
 ## Environment Variables
 
