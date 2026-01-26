@@ -23,6 +23,7 @@ import yaml
 # 상태 파일 경로 (stop-hook.sh 호환)
 STATE_DIR = Path(os.environ.get("SAGE_STATE_DIR", "/tmp"))
 CONFIG_PATH = Path(__file__).resolve().parent / "config.yaml"
+CURRENT_SESSION_FILE = STATE_DIR / "sage_current_session"  # v3.2: 활성 세션 추적
 
 # 역할별 설명 (TodoWrite용)
 ROLE_DESCRIPTIONS = {
@@ -47,16 +48,54 @@ ROLE_DESCRIPTIONS = {
 }
 
 
-def get_session_id() -> str:
-    """세션 ID 획득 또는 생성"""
+def get_session_id(create_new: bool = False) -> str:
+    """세션 ID 획득 또는 생성
+
+    v3.2: 우선순위
+    1. 환경 변수 SAGE_SESSION_ID
+    2. 현재 세션 파일 (/tmp/sage_current_session)
+    3. 새 ID 생성 (create_new=True일 때만)
+
+    Args:
+        create_new: True면 기존 세션 무시하고 새 ID 생성
+    """
+    # 1. 환경 변수 체크
     session_id = os.environ.get("SAGE_SESSION_ID")
-    if session_id:
+    if session_id and not create_new:
         return session_id
-    # 새 세션 ID 생성 (SHA-256 사용)
+
+    # 2. 현재 세션 파일 체크 (v3.2)
+    if not create_new and CURRENT_SESSION_FILE.exists():
+        try:
+            stored_id = CURRENT_SESSION_FILE.read_text().strip()
+            if stored_id:
+                os.environ["SAGE_SESSION_ID"] = stored_id
+                return stored_id
+        except (IOError, OSError):
+            pass
+
+    # 3. 새 세션 ID 생성
     ts = str(time.time()).encode()
     new_id = f"orch-{hashlib.sha256(ts).hexdigest()[:8]}"
     os.environ["SAGE_SESSION_ID"] = new_id
     return new_id
+
+
+def set_current_session(session_id: str) -> None:
+    """현재 세션 ID를 파일에 저장 (v3.2)"""
+    try:
+        CURRENT_SESSION_FILE.write_text(session_id)
+    except (IOError, OSError) as e:
+        print(f"WARNING: 세션 파일 저장 실패: {e}", file=sys.stderr)
+
+
+def clear_current_session() -> None:
+    """현재 세션 파일 삭제 (v3.2)"""
+    try:
+        if CURRENT_SESSION_FILE.exists():
+            CURRENT_SESSION_FILE.unlink()
+    except (IOError, OSError):
+        pass
 
 
 def get_state_file() -> Path:
@@ -252,6 +291,7 @@ def main() -> None:
     # 상태 초기화
     if args.reset:
         clear_state()
+        clear_current_session()  # v3.2
         print("RESET: OK")
         return
 
@@ -314,6 +354,7 @@ def main() -> None:
             state["exit_reason"] = f"Sage 거부: {args.result}"
             state["active"] = False
             save_state(state)
+            clear_current_session()  # v3.2
             print("REJECTED: Sage가 안건을 거부했습니다.")
             print(f"REASON: {args.result}")
             return
@@ -325,6 +366,7 @@ def main() -> None:
             state["exit_reason"] = exit_cond.get("reason", f"{role} 종료 조건 충족")
             state["active"] = False
             save_state(state)
+            clear_current_session()  # v3.2
             print(f"REJECTED: {exit_cond.get('reason', '종료 조건 충족')}")
             print(f"ROLE: {role}")
             print(f"RESULT: {args.result}")
@@ -363,6 +405,7 @@ def main() -> None:
                     state["exit_reason"] = f"분기 최대 횟수 초과: {branch_active} ({current_loops}/{max_loops})"
                     state["active"] = False
                     save_state(state)
+                    clear_current_session()  # v3.2
                     print(f"REJECTED: 분기 최대 횟수 초과 ({current_loops}/{max_loops})")
                     print(f"BRANCH: {branch_active}")
                     return
@@ -398,6 +441,7 @@ def main() -> None:
                 state["exit_reason"] = f"분기 최대 횟수 초과: {branch_to} ({current_loops}/{max_loops})"
                 state["active"] = False
                 save_state(state)
+                clear_current_session()  # v3.2
                 print(f"REJECTED: 분기 최대 횟수 초과 ({current_loops}/{max_loops})")
                 return
 
@@ -433,7 +477,8 @@ def main() -> None:
             state["exit_reason"] = "모든 역할 완료"
             state["active"] = False
             save_state(state)
-            print("APPROVE: 모든 역할 완료")
+            clear_current_session()  # v3.2
+            print("APPROVED: 모든 역할 완료")
             return
 
         save_state(state)
@@ -442,6 +487,10 @@ def main() -> None:
 
     # 새 작업 시작
     if args.task:
+        # v3.2: 새 세션 생성 (기존 세션 무시)
+        session_id = get_session_id(create_new=True)
+        set_current_session(session_id)
+
         # 체인 선택
         chain = select_chain(args.task, config)
 
@@ -452,7 +501,7 @@ def main() -> None:
 
         # v3: 인덱스 기반 상태 구조
         state = {
-            "session_id": get_session_id(),
+            "session_id": session_id,
             "task": args.task,
             "chain_type": chain,
             "chain": chain,  # 하위 호환
@@ -478,6 +527,7 @@ def main() -> None:
         next_role, next_idx = get_next_role_by_index(state)
 
         # 출력
+        print(f"SESSION: {session_id}")
         print(f"CHAIN: {chain}")
         print(f"TOTAL_PHASES: {len(roles)}")
         if next_role:
