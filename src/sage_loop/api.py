@@ -194,8 +194,6 @@ async def execute_session(session_id: str, request: ExecuteRequest = ExecuteRequ
             detail=f"Cannot execute session in {session.status} state",
         )
 
-    settings = get_settings()
-
     # plan-first 모드: 계획 승인 대기
     if session.mode.value == "plan-first" and not request.force:
         await _state_service.update_status(session_id, SessionStatus.WAITING_APPROVAL)

@@ -439,9 +439,6 @@ def export_compact_yaml(
     """
     phase = ROLE_TO_PHASE.get(current_role, 0)
 
-    # 완료된 역할 목록
-    completed_list = list(completed_roles.keys())
-
     # 남은 역할 계산
     try:
         current_idx = FULL_CHAIN.index(current_role)

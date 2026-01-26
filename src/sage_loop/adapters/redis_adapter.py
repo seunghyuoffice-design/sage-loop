@@ -414,7 +414,7 @@ class RedisAdapter:
             loop_counts_raw = chain.get("loop_counts", "{}")
             try:
                 loop_counts = json.loads(loop_counts_raw) if isinstance(loop_counts_raw, str) else loop_counts_raw
-            except:
+            except (json.JSONDecodeError, TypeError):
                 loop_counts = {}
             loop_counts[role] = loop_counts.get(role, 0) + 1
             chain["loop_counts"] = json.dumps(loop_counts)
@@ -437,7 +437,7 @@ class RedisAdapter:
             loop_counts_raw = chain.get("loop_counts", "{}")
             try:
                 loop_counts = json.loads(loop_counts_raw) if isinstance(loop_counts_raw, str) else loop_counts_raw
-            except:
+            except (json.JSONDecodeError, TypeError):
                 loop_counts = {}
             return loop_counts.get(role, 0)
 

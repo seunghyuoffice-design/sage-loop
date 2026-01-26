@@ -5,6 +5,7 @@ Redis 장애 시 메모리 폴백 지원.
 """
 
 import fnmatch
+import os
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -90,7 +91,11 @@ class FeedbackManager:
                 config = get_hook_config()
                 redis_url = config.redis_url
             except ImportError:
-                redis_url = "redis://100.83.215.100:6380/0"
+                # config 로드 실패 시 환경변수에서 직접 구성
+                host = os.environ.get("SAGE_REDIS_HOST", "localhost")
+                port = os.environ.get("SAGE_REDIS_PORT", "6380")
+                db = os.environ.get("SAGE_REDIS_DB", "0")
+                redis_url = f"redis://{host}:{port}/{db}"
 
         self._redis_url = redis_url
         self._redis: Any = None

@@ -12,7 +12,7 @@ Sage Configuration - Feedback Loop Pattern
 
 Hook 환경 변수 (Phase A 추가):
     SAGE_STATE_DIR: 상태 파일 디렉토리 (기본: /tmp)
-    SAGE_PROJECT_ROOT: 프로젝트 루트 (기본: /home/rovers/Dyarchy-v3)
+    SAGE_PROJECT_ROOT: 프로젝트 루트 (기본: ~/Dyarchy-v3)
     SAGE_MAX_LOOPS: 최대 루프 횟수 (기본: 50)
     SAGE_SESSION_TIMEOUT: 세션 타임아웃 초 (기본: 3600)
     SAGE_STAGNATION_THRESHOLD: 정체 감지 임계값 (기본: 3)
@@ -142,8 +142,8 @@ def get_hook_config() -> HookConfig:
     if _hook_config is None:
         _hook_config = HookConfig(
             state_dir=Path(os.environ.get("SAGE_STATE_DIR", "/tmp")),
-            project_root=Path(os.environ.get("SAGE_PROJECT_ROOT", "/home/rovers/Dyarchy-v3")),
-            redis_host=os.environ.get("SAGE_REDIS_HOST", "100.83.215.100"),
+            project_root=Path(os.environ.get("SAGE_PROJECT_ROOT", str(Path.home() / "Dyarchy-v3"))),
+            redis_host=os.environ.get("SAGE_REDIS_HOST", "localhost"),
             redis_port=int(os.environ.get("SAGE_REDIS_PORT", "6380")),
             redis_db=int(os.environ.get("SAGE_REDIS_DB", "0")),
             max_loops=int(os.environ.get("SAGE_MAX_LOOPS", "50")),
