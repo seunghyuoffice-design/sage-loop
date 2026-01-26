@@ -2,7 +2,6 @@
 name: sage
 description: "최종 승인권자. Phase 1(접수), 10(허가), 14(결재)에서 3회 등장"
 alias: 영의정 (領議政)
-model: opus
 ---
 
 **Phase 1/10/14** | 승인: "가하다" | 거부: "불가하다" (max 3회 재시작)

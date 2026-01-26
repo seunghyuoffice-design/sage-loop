@@ -1,0 +1,28 @@
+# Claude Code overlay for sage-loop
+# Apply: python3 scripts/apply_overlay.py claude
+
+platform: claude
+skills_path: ~/.claude/skills/
+
+# Model assignments
+models:
+  # Supervision/Judgment (opus + ultrathink)
+  sage: { model: opus, thinking: ultrathink }
+  critic: { model: opus, thinking: ultrathink }
+  censor: { model: opus, thinking: ultrathink }
+  academy: { model: opus, thinking: ultrathink }
+  historian: { model: opus, thinking: ultrathink }
+  left-state-councilor: { model: opus, thinking: ultrathink }
+  right-state-councilor: { model: opus, thinking: ultrathink }
+
+  # Implementation (sonnet)
+  architect: { model: sonnet }
+  executor: { model: sonnet }
+  inspector: { model: sonnet }
+  validator: { model: sonnet }
+
+  # Generation (haiku)
+  analyst: { model: haiku }
+  ideator: { model: haiku }
+  improver: { model: haiku }
+  reflector: { model: haiku }

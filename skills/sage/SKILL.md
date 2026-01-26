@@ -2,7 +2,6 @@
 name: sage
 description: 의정부 영의정. 17단계 체인을 자율 실행하는 오케스트레이터
 alias: 영의정 (領議政)
-model: opus
 ---
 
 ## 1. 체인 초기화

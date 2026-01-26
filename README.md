@@ -1,17 +1,18 @@
 # Sage Loop
 
-A 17-phase autonomous agent orchestration system for Claude Code, inspired by the Korean Joseon Dynasty's Uijeongbu (의정부) deliberation system.
+A 17-phase autonomous agent orchestration system, inspired by the Korean Joseon Dynasty's Uijeongbu (의정부) deliberation system.
 
 ## Overview
 
 Sage Loop implements a hierarchical decision-making chain where each role has specific responsibilities, enabling thorough analysis, critique, and execution of complex tasks.
 
 The Sage (영의정) appears **three times**, following the historical Uijeongbu deliberation flow:
+
 1. **Phase 1**: Accept petition and initiate review ("검토하라")
 2. **Phase 10**: Authorize execution after deliberation ("시행하라")
 3. **Phase 14**: Final approval after validation ("완료 확인")
 
-```
+```text
 Sage(접수) → Ideator → Analyst → Critic → Censor → Academy → Architect
     → LeftState → RightState → Sage(허가) → Executor
     → Inspector → Validator → Sage(결재) → Historian → Reflector → Improver
@@ -20,7 +21,7 @@ Sage(접수) → Ideator → Analyst → Critic → Censor → Academy → Archi
 ## Roles (17 Phases)
 
 | Phase | Role | Korean | Function |
-|-------|------|--------|----------|
+| ----- | ---- | ------ | -------- |
 | 1 | **Sage** | 영의정 | **Accept petition (1st)** - "검토하라" |
 | 2 | Ideator | 현인 | Generate 50+ ideas |
 | 3 | Analyst | 선지자 | Filter to 5 best ideas |
@@ -41,28 +42,82 @@ Sage(접수) → Ideator → Analyst → Critic → Censor → Academy → Archi
 
 ## Chain Types
 
-- **FULL**: All 15 phases (complex tasks)
+- **FULL**: All 17 phases (complex tasks)
 - **QUICK**: Critic → Architect → Executor → Validator → Historian
 - **REVIEW**: Critic → Validator
 - **DESIGN**: Ideator → Analyst → Critic → Architect
 
 ## Installation
 
-### As Claude Code Skills
+### Quick Start (Platform-Specific)
+
+```bash
+# Clone the repo
+git clone https://github.com/seunghyuoffice-design/sage-loop.git
+cd sage-loop
+
+# Apply overlay for your platform
+python3 scripts/apply_overlay.py claude   # For Claude Code
+python3 scripts/apply_overlay.py codex    # For OpenAI Codex
+
+# Copy hooks (Claude Code only)
+cp hooks/* ~/.claude/hooks/
+chmod +x ~/.claude/hooks/*.sh
+```
+
+### Manual Installation (Claude Code)
 
 ```bash
 # Copy skills to your Claude Code project
-cp -r skills/* .claude/skills/
+cp -r skills/* ~/.claude/skills/
 
 # Copy hooks
-cp hooks/* .claude/hooks/
-chmod +x .claude/hooks/*.sh
+cp hooks/* ~/.claude/hooks/
+chmod +x ~/.claude/hooks/*.sh
 ```
 
 ### As Python Package
 
 ```bash
 pip install -e .
+```
+
+## Cross-Platform Support
+
+sage-loop is platform-agnostic at its core. Skills are defined without model specifications, allowing you to run them on any LLM platform.
+
+### Overlay System
+
+Platform-specific configurations are managed through **overlays**:
+
+```text
+overlays/
+├── claude/
+│   └── model_map.yaml   # Claude models + ultrathink
+└── codex/
+    └── model_map.yaml   # Codex models + reasoning_effort
+```
+
+### Model Mapping
+
+| Role Type | Claude | Codex |
+| --------- | ------ | ----- |
+| Supervision (sage, critic, censor) | opus + ultrathink | gpt-5.2 + reasoning:high |
+| Implementation (executor, architect) | sonnet | gpt-5.2-codex |
+| Generation (ideator, analyst) | haiku | gpt-5.1-codex-mini |
+
+### Custom Overlays
+
+Create your own overlay for other platforms:
+
+```yaml
+# overlays/my-platform/model_map.yaml
+platform: my-platform
+skills_path: ~/.my-platform/skills/
+
+models:
+  sage: { model: my-best-model, thinking: extended }
+  ideator: { model: my-fast-model }
 ```
 
 ## Usage
@@ -80,8 +135,8 @@ pip install -e .
 ### Programmatic Usage
 
 ```python
-from sage.engine.sage_commander import SageCommander
-from sage.schemas import ChainType
+from sage_loop.engine.sage_commander import SageCommander
+from sage_loop.schemas import ChainType
 
 commander = SageCommander()
 result = await commander.execute_chain(
@@ -93,24 +148,31 @@ result = await commander.execute_chain(
 
 ## Architecture
 
-```
+```text
 sage-loop/
-├── skills/           # Role definitions (markdown)
+├── skills/           # Role definitions (platform-agnostic)
+│   ├── sage/         # Orchestrator skill
+│   ├── ideator.md
+│   ├── critic.md
+│   └── ...
+├── overlays/         # Platform-specific configurations
+│   ├── claude/       # Claude Code overlay
+│   └── codex/        # OpenAI Codex overlay
+├── scripts/
+│   └── apply_overlay.py
 ├── hooks/            # Claude Code hooks
-│   ├── stop-hook.sh
-│   ├── completion_detector.py
-│   ├── circuit_breaker_check.py
-│   └── sage_state_manager.py
-├── src/sage/
+├── src/sage_loop/
 │   ├── engine/       # Core orchestration
-│   ├── services/     # State management
-│   ├── feedback/     # Feedback loop
+│   ├── cli/          # CLI tools
+│   ├── hooks/        # Phase hooks
 │   └── schemas.py    # Data models
-└── docs/
+└── pyproject.toml
 ```
 
 ## Key Features
 
+- **Platform Agnostic**: Core skills work on any LLM platform
+- **Overlay System**: Platform-specific model/thinking configuration
 - **Context Isolation**: Each role runs in isolated context via Task tool
 - **Branching**: Dynamic branching based on role outputs
 - **Circuit Breaker**: Prevents infinite loops
@@ -143,7 +205,3 @@ MIT License
 ## Contributing
 
 Contributions welcome! Please read our contributing guidelines.
-
----
-
-*Built with Claude Code*

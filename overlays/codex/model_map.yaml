@@ -1,0 +1,29 @@
+# OpenAI Codex overlay for sage-loop
+# Apply: python3 scripts/apply_overlay.py codex
+
+platform: codex
+skills_path: ~/.codex/skills/
+config_path: ~/.codex/config.toml
+
+# Model assignments
+models:
+  # Supervision/Judgment (gpt-5.2 + reasoning_effort: high)
+  sage: { model: gpt-5.2, reasoning_effort: high }
+  critic: { model: gpt-5.2, reasoning_effort: high }
+  censor: { model: gpt-5.2, reasoning_effort: high }
+  academy: { model: gpt-5.2, reasoning_effort: high }
+  historian: { model: gpt-5.2, reasoning_effort: high }
+  left-state-councilor: { model: gpt-5.2, reasoning_effort: high }
+  right-state-councilor: { model: gpt-5.2, reasoning_effort: high }
+
+  # Implementation (gpt-5.2-codex - Frontier builder)
+  architect: { model: gpt-5.2-codex }
+  executor: { model: gpt-5.2-codex }
+  inspector: { model: gpt-5.2-codex }
+  validator: { model: gpt-5.2-codex }
+
+  # Generation (gpt-5.1-codex-mini)
+  analyst: { model: gpt-5.1-codex-mini }
+  ideator: { model: gpt-5.1-codex-mini }
+  improver: { model: gpt-5.1-codex-mini }
+  reflector: { model: gpt-5.1-codex-mini }
