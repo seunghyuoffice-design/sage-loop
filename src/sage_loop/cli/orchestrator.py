@@ -1,32 +1,62 @@
 #!/usr/bin/env python3
 """
-Sage Orchestrator - 체인 오케스트레이션 엔진
+Sage Orchestrator v4 - 병렬 실행 지원
 
-컨텍스트 최소화를 위해 모든 로직은 Python에서 처리
-Claude는 출력만 읽고 행동
+주요 변경:
+- 병렬 그룹 지원 (좌의정/우의정 동시 실행)
+- 명확한 상태 머신
+- 간결한 CLI 인터페이스
+- 결과 병합 로직
 
-v3: 인덱스 기반 역할 추적 + 분기 루프백 + Sage 거부 처리
+사용법:
+  python orchestrator_v4.py "새 기능 개발"           # 체인 시작
+  python orchestrator_v4.py --complete ideator      # 역할 완료
+  python orchestrator_v4.py --complete left-state-councilor,right-state-councilor  # 병렬 완료
+  python orchestrator_v4.py --status                # 상태 확인
+  python orchestrator_v4.py --reset                 # 초기화
 """
 
+from __future__ import annotations
+
 import argparse
+import fcntl
 import hashlib
 import json
 import os
 import sys
+import tempfile
 import time
+from dataclasses import dataclass, field, asdict
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional, Union
 
 import yaml
 
-# 상태 파일 경로 (stop-hook.sh 호환)
-STATE_DIR = Path(os.environ.get("SAGE_STATE_DIR", "/tmp"))
-CONFIG_PATH = Path(__file__).resolve().parent / "config.yaml"
-CURRENT_SESSION_FILE = STATE_DIR / "sage_current_session"  # v3.2: 활성 세션 추적
 
-# 역할별 설명 (TodoWrite용)
-ROLE_DESCRIPTIONS = {
+# =============================================================================
+# Constants
+# =============================================================================
+
+STATE_DIR = Path(os.environ.get("SAGE_STATE_DIR", "/tmp"))
+CONFIG_PATH = Path(__file__).resolve().parent / "config_v4.yaml"
+CURRENT_SESSION_FILE = STATE_DIR / "sage_current_session"
+
+
+class ChainStatus(str, Enum):
+    """체인 상태"""
+    IDLE = "idle"
+    RUNNING = "running"
+    WAITING_PARALLEL = "waiting_parallel"  # 병렬 그룹 완료 대기
+    BRANCHING = "branching"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+# 역할 설명 (TodoWrite용)
+ROLE_INFO = {
+    "sage": ("영의정 심의", "영의정 심의 중"),
     "ideator": ("아이디어 생성", "아이디어 생성 중"),
     "analyst": ("분석/선별", "분석 중"),
     "critic": ("위험/결함 비판", "비판 검토 중"),
@@ -35,7 +65,6 @@ ROLE_DESCRIPTIONS = {
     "architect": ("설계 수립", "설계 중"),
     "left-state-councilor": ("내정 검토", "내정 검토 중"),
     "right-state-councilor": ("실무 검토", "실무 검토 중"),
-    "sage": ("최종 승인", "최종 승인 중"),
     "executor": ("구현", "구현 중"),
     "inspector": ("감찰", "감찰 중"),
     "validator": ("검증", "검증 중"),
@@ -48,495 +77,641 @@ ROLE_DESCRIPTIONS = {
 }
 
 
-def get_session_id(create_new: bool = False) -> str:
-    """세션 ID 획득 또는 생성
+# =============================================================================
+# Data Classes
+# =============================================================================
 
-    v3.2: 우선순위
-    1. 환경 변수 SAGE_SESSION_ID
-    2. 현재 세션 파일 (/tmp/sage_current_session)
-    3. 새 ID 생성 (create_new=True일 때만)
+@dataclass
+class PhaseItem:
+    """체인의 단일 페이즈 (순차 또는 병렬)"""
+    index: int
+    roles: list[str]  # 단일 역할이면 [role], 병렬이면 [role1, role2]
+    is_parallel: bool = False
 
-    Args:
-        create_new: True면 기존 세션 무시하고 새 ID 생성
-    """
-    # 1. 환경 변수 체크
-    session_id = os.environ.get("SAGE_SESSION_ID")
-    if session_id and not create_new:
-        return session_id
+    @property
+    def display_name(self) -> str:
+        if self.is_parallel:
+            return f"[{' + '.join(self.roles)}]"
+        return self.roles[0]
 
-    # 2. 현재 세션 파일 체크 (v3.2)
-    if not create_new and CURRENT_SESSION_FILE.exists():
-        try:
-            stored_id = CURRENT_SESSION_FILE.read_text().strip()
-            if stored_id:
-                os.environ["SAGE_SESSION_ID"] = stored_id
-                return stored_id
-        except (IOError, OSError):
-            pass
 
-    # 3. 새 세션 ID 생성
+@dataclass
+class ChainState:
+    """체인 실행 상태"""
+    session_id: str
+    task: str
+    chain_name: str
+    phases: list[dict]  # PhaseItem을 dict로 저장
+
+    status: str = ChainStatus.IDLE.value
+    current_phase: int = 0
+
+    # 완료 추적
+    completed_phases: list[int] = field(default_factory=list)
+    pending_roles: list[str] = field(default_factory=list)  # 병렬 대기 중
+    completed_parallel: list[str] = field(default_factory=list)  # 병렬 중 완료된 것
+
+    # 분기 상태
+    branch_active: Optional[str] = None
+    branch_return_phase: Optional[int] = None
+    branch_loops: dict = field(default_factory=dict)
+
+    # 역할별 결과 저장
+    role_results: dict = field(default_factory=dict)
+
+    # 메타데이터
+    started_at: str = ""
+    exit_reason: str = ""
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ChainState":
+        return cls(**data)
+
+
+# =============================================================================
+# Session Management
+# =============================================================================
+
+def generate_session_id() -> str:
     ts = str(time.time()).encode()
-    new_id = f"orch-{hashlib.sha256(ts).hexdigest()[:8]}"
+    return f"v4-{hashlib.sha256(ts).hexdigest()[:8]}"
+
+
+def get_session_id(create_new: bool = False) -> str:
+    """세션 ID 획득"""
+    if not create_new:
+        # 1. 환경 변수
+        env_id = os.environ.get("SAGE_SESSION_ID")
+        if env_id:
+            return env_id
+
+        # 2. 세션 파일
+        if CURRENT_SESSION_FILE.exists():
+            stored = CURRENT_SESSION_FILE.read_text().strip()
+            if stored:
+                return stored
+
+    # 3. 새 ID 생성
+    new_id = generate_session_id()
     os.environ["SAGE_SESSION_ID"] = new_id
     return new_id
 
 
-def set_current_session(session_id: str) -> None:
-    """현재 세션 ID를 파일에 저장 (v3.2)"""
+def set_session(session_id: str) -> None:
+    CURRENT_SESSION_FILE.write_text(session_id)
+    os.environ["SAGE_SESSION_ID"] = session_id
+
+
+def clear_session() -> None:
+    if CURRENT_SESSION_FILE.exists():
+        CURRENT_SESSION_FILE.unlink()
+    os.environ.pop("SAGE_SESSION_ID", None)
+
+
+def get_state_path() -> Path:
+    return STATE_DIR / f"sage_v4_{get_session_id()}.json"
+
+
+# =============================================================================
+# State Persistence (File Lock + Atomic Write)
+# =============================================================================
+
+def load_state_unsafe() -> Optional[ChainState]:
+    """락 없이 상태 읽기 (내부용)"""
+    path = get_state_path()
+    if not path.exists():
+        return None
     try:
-        CURRENT_SESSION_FILE.write_text(session_id)
-    except (IOError, OSError) as e:
-        print(f"WARNING: 세션 파일 저장 실패: {e}", file=sys.stderr)
+        data = json.loads(path.read_text())
+        return ChainState.from_dict(data)
+    except (json.JSONDecodeError, TypeError):
+        return None
 
 
-def clear_current_session() -> None:
-    """현재 세션 파일 삭제 (v3.2)"""
+def load_state() -> Optional[ChainState]:
+    """상태 읽기 (외부용, 호환성 유지)"""
+    return load_state_unsafe()
+
+
+def save_state_atomic(state: ChainState) -> None:
+    """원자적 저장 (temp → rename)"""
+    path = get_state_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    fd, tmp_path = tempfile.mkstemp(dir=path.parent, suffix='.tmp')
     try:
-        if CURRENT_SESSION_FILE.exists():
-            CURRENT_SESSION_FILE.unlink()
-    except (IOError, OSError):
-        pass
-
-
-def get_state_file() -> Path:
-    """세션별 상태 파일 경로 (stop-hook.sh 호환)"""
-    session_id = get_session_id()
-    return STATE_DIR / f"sage_session_{session_id}.json"
-
-
-# 체인 정의 (config.yaml에서 로드)
-def load_config() -> dict:
-    if CONFIG_PATH.exists():
-        return yaml.safe_load(CONFIG_PATH.read_text()) or {}
-    return {}
-
-
-def load_state() -> dict:
-    # v3 기본 상태
-    default_state = {
-        "session_id": get_session_id(),
-        "chain_type": None,
-        "chain_roles": [],
-        "current_index": 0,  # v3: 인덱스 기반 추적
-        "current_role": None,
-        "completed_indices": [],  # v3: 완료된 인덱스 목록
-        "completed_roles": [],  # 하위 호환
-        "role_outputs": {},
-        "active": False,
-        "exit_signal": False,
-        "loop_count": 0,
-        # v3: 분기 상태
-        "branch_active": None,  # 현재 활성 분기 역할
-        "branch_return_index": None,  # 분기 완료 후 돌아갈 인덱스
-        "branch_loops": {},  # {from_role: count} 분기 횟수 추적
-    }
-
-    state_file = get_state_file()
-    if state_file.exists():
+        with os.fdopen(fd, 'w') as f:
+            json.dump(state.to_dict(), f, ensure_ascii=False, indent=2)
+        os.rename(tmp_path, path)  # POSIX에서 원자적
+    except Exception:
         try:
-            loaded = json.loads(state_file.read_text())
-            # 기본 상태와 병합 (기존 값 우선)
-            default_state.update(loaded)
-            return default_state
-        except (json.JSONDecodeError, IOError):
+            os.unlink(tmp_path)
+        except OSError:
             pass
+        raise
 
-    return default_state
+
+def save_state(state: ChainState) -> None:
+    """상태 저장 (외부용, 호환성 유지)"""
+    save_state_atomic(state)
 
 
-def save_state(state: dict) -> None:
-    state_file = get_state_file()
-    state_file.write_text(json.dumps(state, ensure_ascii=False, indent=2))
+def atomic_state_update(
+    update_fn: Callable[[ChainState], ChainState],
+    max_retries: int = 3
+) -> ChainState:
+    """원자적 상태 업데이트 (파일 락 + atomic write)
+
+    Args:
+        update_fn: 상태를 받아 수정된 상태를 반환하는 함수
+        max_retries: 락 획득 최대 재시도 횟수
+
+    Returns:
+        업데이트된 ChainState
+
+    Raises:
+        ValueError: 활성 세션이 없을 때
+        RuntimeError: 락 획득 실패 시
+    """
+    path = get_state_path()
+    lock_path = path.with_suffix('.lock')
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+
+    for attempt in range(max_retries):
+        try:
+            with open(lock_path, 'w') as lock_file:
+                fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                try:
+                    # Read current state
+                    state = load_state_unsafe()
+                    if state is None:
+                        raise ValueError("No active session")
+
+                    # Apply update
+                    state = update_fn(state)
+
+                    # Atomic write
+                    save_state_atomic(state)
+                    return state
+                finally:
+                    fcntl.flock(lock_file, fcntl.LOCK_UN)
+        except BlockingIOError:
+            if attempt < max_retries - 1:
+                time.sleep(0.1 * (attempt + 1))  # 100ms, 200ms, 300ms
+            else:
+                raise RuntimeError(f"Failed to acquire state lock after {max_retries} attempts")
+
+    # Should not reach here
+    raise RuntimeError("Unexpected error in atomic_state_update")
 
 
 def clear_state() -> None:
-    state_file = get_state_file()
-    if state_file.exists():
-        state_file.unlink()
+    """상태 파일 삭제"""
+    path = get_state_path()
+    lock_path = path.with_suffix('.lock')
+    if path.exists():
+        path.unlink()
+    if lock_path.exists():
+        lock_path.unlink()
 
 
-# 체인 선택 로직
+# =============================================================================
+# Config Loading
+# =============================================================================
+
+def load_config() -> dict:
+    # v4 config 우선, 없으면 기존 config 사용
+    if CONFIG_PATH.exists():
+        return yaml.safe_load(CONFIG_PATH.read_text()) or {}
+
+    # fallback to old config
+    old_config = CONFIG_PATH.parent / "config.yaml"
+    if old_config.exists():
+        return yaml.safe_load(old_config.read_text()) or {}
+
+    return {}
+
+
+def parse_chain_roles(roles_config: list) -> list[PhaseItem]:
+    """
+    체인 설정을 PhaseItem 리스트로 변환
+
+    지원 형식:
+    - "role"                    → 순차 실행
+    - ["role1", "role2"]        → 병렬 실행
+    - {"parallel": ["r1", "r2"]} → 명시적 병렬
+    """
+    phases = []
+    idx = 0
+
+    for item in roles_config:
+        if isinstance(item, str):
+            # 단일 역할 (순차)
+            phases.append(PhaseItem(index=idx, roles=[item], is_parallel=False))
+        elif isinstance(item, list):
+            # 리스트 = 병렬
+            phases.append(PhaseItem(index=idx, roles=item, is_parallel=True))
+        elif isinstance(item, dict):
+            # 명시적 parallel 키
+            if "parallel" in item:
+                phases.append(PhaseItem(index=idx, roles=item["parallel"], is_parallel=True))
+            elif "sequential" in item:
+                # 순차 그룹 (개별 phase로 분리)
+                for role in item["sequential"]:
+                    phases.append(PhaseItem(index=idx, roles=[role], is_parallel=False))
+                    idx += 1
+                continue
+        idx += 1
+
+    return phases
+
+
 def select_chain(task: str, config: dict) -> str:
+    """작업에 맞는 체인 선택"""
     task_lower = task.lower()
     chains = config.get("chains", {})
 
-    # O(n²) → O(n) 최적화: 키워드를 set으로 전처리
-    for chain_name, chain_cfg in chains.items():
-        triggers = chain_cfg.get("triggers", {})
-        keywords = triggers.get("keywords", [])
-        keyword_set = {kw.lower() for kw in keywords}  # 전처리
-
-        # 단일 루프로 체크
-        if any(kw in task_lower for kw in keyword_set):
-            return chain_name
+    for name, cfg in chains.items():
+        triggers = cfg.get("triggers", {})
+        keywords = [k.lower() for k in triggers.get("keywords", [])]
+        if any(kw in task_lower for kw in keywords):
+            return name
 
     return config.get("defaults", {}).get("fallback_chain", "FULL")
 
 
-# v3: 인덱스 기반 다음 역할 결정
-def get_next_role_by_index(state: dict) -> tuple[Optional[str], Optional[int]]:
-    """인덱스 기반으로 다음 역할과 인덱스 반환"""
-    chain_roles = state.get("chain_roles", [])
-    if not chain_roles:
-        return None, None
+# =============================================================================
+# Branch Logic
+# =============================================================================
 
-    current_index = state.get("current_index", 0)
-    completed_indices = set(state.get("completed_indices", []))
-
-    # 현재 인덱스부터 순회
-    for i in range(current_index, len(chain_roles)):
-        if i not in completed_indices:
-            return chain_roles[i], i
-
-    return None, None  # 모든 역할 완료
-
-
-# v3: 분기 설정 조회 (max_loops 포함)
-def get_branch_config(role: str, config: dict, chain_name: str) -> Optional[dict]:
-    """분기 설정 반환 (from, to, condition, max_loops)"""
+def check_branch(role: str, result: str, config: dict, chain_name: str) -> Optional[dict]:
+    """분기 조건 확인"""
     chains = config.get("chains", {})
     chain = chains.get(chain_name, {})
     branches = chain.get("branches", [])
 
+    result_lower = result.lower()
     for branch in branches:
-        if branch.get("from") == role:
+        if branch.get("from") != role:
+            continue
+
+        conditions = branch.get("condition", [])
+        if isinstance(conditions, str):
+            conditions = [conditions]
+
+        if any(c.lower() in result_lower for c in conditions):
             return branch
 
     return None
 
 
-# v3: 분기 조건 체크
-def check_branch_condition(role: str, result: str, config: dict, chain_name: str) -> Optional[dict]:
-    """
-    결과가 분기 조건을 만족하면 분기 설정 반환
-
-    condition은 문자열 또는 배열 지원:
-    - 문자열: "reject" → result에 "reject" 포함 시 분기
-    - 배열: ["reject", "반려", "거절"] → 하나라도 포함 시 분기
-    """
-    branch_config = get_branch_config(role, config, chain_name)
-    if not branch_config:
-        return None
-
-    condition = branch_config.get("condition", "")
-    result_lower = result.lower()
-
-    # 배열 지원
-    if isinstance(condition, list):
-        for cond in condition:
-            if cond.lower() in result_lower:
-                return branch_config
-        return None
-
-    # 문자열
-    if condition.lower() in result_lower:
-        return branch_config
-
-    return None
-
-
-# v3: Sage 거부 체크
-def check_sage_rejection(role: str, result: str) -> bool:
-    """Sage 역할의 거부 여부 확인"""
-    if role != "sage":
-        return False
-
-    rejection_keywords = ["불가", "rejected", "거부", "기각", "반려"]
-    result_lower = result.lower()
-    return any(kw in result_lower for kw in rejection_keywords)
-
-
-# v3.1: Exit Conditions 체크 (config.yaml에서 로드)
-def check_exit_condition(role: str, result: str, config: dict, chain_name: str) -> Optional[dict]:
+def check_exit(role: str, result: str, config: dict, chain_name: str) -> Optional[dict]:
     """즉시 종료 조건 확인"""
     chains = config.get("chains", {})
     chain = chains.get(chain_name, {})
-    exit_conditions = chain.get("exit_conditions", [])
+    exits = chain.get("exit_conditions", [])
 
     result_lower = result.lower()
-    for cond in exit_conditions:
-        if cond.get("role") == role:
-            keywords = cond.get("keywords", [])
-            if any(kw.lower() in result_lower for kw in keywords):
-                return cond
+    for cond in exits:
+        if cond.get("role") != role:
+            continue
+
+        keywords = cond.get("keywords", [])
+        if any(kw.lower() in result_lower for kw in keywords):
+            return cond
 
     return None
 
 
-def generate_todos(roles: list) -> list:
-    """체인 역할 목록으로 TodoWrite용 JSON 생성"""
+# =============================================================================
+# Core Logic
+# =============================================================================
+
+def start_chain(task: str, config: dict) -> ChainState:
+    """새 체인 시작"""
+    session_id = generate_session_id()
+    set_session(session_id)
+
+    chain_name = select_chain(task, config)
+    chains = config.get("chains", {})
+    chain_cfg = chains.get(chain_name, {})
+    roles_config = chain_cfg.get("roles", [])
+
+    phases = parse_chain_roles(roles_config)
+
+    state = ChainState(
+        session_id=session_id,
+        task=task,
+        chain_name=chain_name,
+        phases=[asdict(p) for p in phases],
+        status=ChainStatus.RUNNING.value,
+        current_phase=0,
+        started_at=datetime.now().isoformat(),
+    )
+
+    # 첫 phase 설정
+    if phases:
+        first = phases[0]
+        if first.is_parallel:
+            state.pending_roles = first.roles.copy()
+            state.status = ChainStatus.WAITING_PARALLEL.value
+        else:
+            state.pending_roles = first.roles.copy()
+
+    save_state(state)
+    return state
+
+
+def _complete_role_impl(state: ChainState, roles: list[str], results: dict[str, str], config: dict) -> ChainState:
+    """역할 완료 처리 (내부 구현, 저장 없음)"""
+    phase_data = state.phases[state.current_phase]
+    phase = PhaseItem(**phase_data)
+
+    # 결과 저장
+    for role, result in results.items():
+        state.role_results[role] = result
+
+    # 분기/종료 체크 (각 역할별)
+    for role, result in results.items():
+        # 종료 조건 체크
+        exit_cond = check_exit(role, result, config, state.chain_name)
+        if exit_cond:
+            state.status = ChainStatus.REJECTED.value
+            state.exit_reason = exit_cond.get("reason", f"{role} 종료 조건")
+            clear_session()
+            return state
+
+        # 분기 조건 체크
+        branch = check_branch(role, result, config, state.chain_name)
+        if branch:
+            branch_to = branch.get("to")
+            max_loops = branch.get("max_loops", 2)
+
+            # 분기 횟수 체크
+            loop_key = f"{role}->{branch_to}"
+            current_loops = state.branch_loops.get(loop_key, 0) + 1
+            state.branch_loops[loop_key] = current_loops
+
+            if current_loops > max_loops:
+                state.status = ChainStatus.REJECTED.value
+                state.exit_reason = f"분기 최대 횟수 초과: {loop_key} ({current_loops}/{max_loops})"
+                clear_session()
+                return state
+
+            # 분기 활성화
+            state.branch_active = branch_to
+            state.branch_return_phase = state.current_phase
+            state.status = ChainStatus.BRANCHING.value
+            state.pending_roles = [branch_to]
+            return state
+
+    # 병렬 그룹 처리
+    if phase.is_parallel:
+        for role in roles:
+            if role in state.pending_roles:
+                state.pending_roles.remove(role)
+                state.completed_parallel.append(role)
+
+        # 아직 대기 중인 역할이 있으면 유지
+        if state.pending_roles:
+            return state
+
+        # 모든 병렬 역할 완료
+        state.completed_parallel = []
+
+    # 분기 복귀 처리
+    if state.branch_active:
+        state.branch_active = None
+        state.current_phase = state.branch_return_phase
+        state.branch_return_phase = None
+        # 원래 phase 재실행
+        phase_data = state.phases[state.current_phase]
+        phase = PhaseItem(**phase_data)
+        state.pending_roles = phase.roles.copy()
+        state.status = ChainStatus.RUNNING.value
+        return state
+
+    # 다음 phase로 진행
+    state.completed_phases.append(state.current_phase)
+    state.current_phase += 1
+
+    # 체인 완료 체크
+    if state.current_phase >= len(state.phases):
+        state.status = ChainStatus.APPROVED.value
+        state.exit_reason = "모든 역할 완료"
+        clear_session()
+        return state
+
+    # 다음 phase 설정
+    next_phase_data = state.phases[state.current_phase]
+    next_phase = PhaseItem(**next_phase_data)
+    state.pending_roles = next_phase.roles.copy()
+
+    if next_phase.is_parallel:
+        state.status = ChainStatus.WAITING_PARALLEL.value
+    else:
+        state.status = ChainStatus.RUNNING.value
+
+    return state
+
+
+def complete_role_atomic(roles: list[str], results: dict[str, str], config: dict) -> ChainState:
+    """역할 완료 처리 (원자적, 파일 락 적용)
+
+    병렬 역할이 동시에 완료되어도 안전하게 상태 업데이트.
+    """
+    def do_complete(state: ChainState) -> ChainState:
+        return _complete_role_impl(state, roles, results, config)
+
+    return atomic_state_update(do_complete)
+
+
+def complete_role(state: ChainState, roles: list[str], results: dict[str, str], config: dict) -> ChainState:
+    """역할 완료 처리 (레거시 호환용)
+
+    주의: 이 함수는 호환성을 위해 유지되지만, 병렬 실행 시
+    complete_role_atomic()을 사용해야 합니다.
+    """
+    state = _complete_role_impl(state, roles, results, config)
+    save_state(state)
+    return state
+
+
+# =============================================================================
+# Output Formatting
+# =============================================================================
+
+def generate_todos(phases: list[PhaseItem]) -> list[dict]:
+    """TodoWrite용 JSON 생성"""
     todos = []
-    for i, role in enumerate(roles, 1):
-        desc, active = ROLE_DESCRIPTIONS.get(role, (role, f"{role} 실행 중"))
+    for i, phase in enumerate(phases, 1):
+        if phase.is_parallel:
+            roles_str = " + ".join(phase.roles)
+            desc = f"병렬: {', '.join(ROLE_INFO.get(r, (r, r))[0] for r in phase.roles)}"
+            active = f"{roles_str} 실행 중"
+        else:
+            role = phase.roles[0]
+            desc, active = ROLE_INFO.get(role, (role, f"{role} 실행 중"))
+
         todos.append({
-            "content": f"Phase {i}: {role} - {desc}",
+            "content": f"Phase {i}: {phase.display_name} - {desc}",
             "status": "pending",
-            "activeForm": active
+            "activeForm": active,
         })
     return todos
 
 
+def print_status(state: ChainState) -> None:
+    """상태 출력"""
+    print(f"SESSION: {state.session_id}")
+    print(f"CHAIN: {state.chain_name}")
+    print(f"STATUS: {state.status}")
+    print(f"PHASE: {state.current_phase + 1}/{len(state.phases)}")
+
+    if state.completed_phases:
+        completed_names = []
+        for idx in state.completed_phases:
+            phase = PhaseItem(**state.phases[idx])
+            completed_names.append(phase.display_name)
+        print(f"COMPLETED: {', '.join(completed_names)}")
+
+    if state.status == ChainStatus.WAITING_PARALLEL.value:
+        print(f"PENDING_PARALLEL: {', '.join(state.pending_roles)}")
+        if state.completed_parallel:
+            print(f"COMPLETED_PARALLEL: {', '.join(state.completed_parallel)}")
+
+    if state.branch_active:
+        print(f"BRANCH_ACTIVE: {state.branch_active}")
+
+    if state.status in (ChainStatus.APPROVED.value, ChainStatus.REJECTED.value):
+        print(f"REASON: {state.exit_reason}")
+    elif state.pending_roles:
+        if len(state.pending_roles) > 1:
+            print(f"NEXT_PARALLEL: {', '.join(state.pending_roles)}")
+        else:
+            print(f"NEXT: {state.pending_roles[0]}")
+
+
+def print_start(state: ChainState) -> None:
+    """시작 출력"""
+    phases = [PhaseItem(**p) for p in state.phases]
+
+    print(f"SESSION: {state.session_id}")
+    print(f"CHAIN: {state.chain_name}")
+    print(f"TOTAL_PHASES: {len(phases)}")
+
+    if state.pending_roles:
+        if len(state.pending_roles) > 1:
+            print(f"NEXT_PARALLEL: {', '.join(state.pending_roles)}")
+        else:
+            print(f"NEXT: {state.pending_roles[0]}")
+
+    print("TODO_REQUIRED:")
+    print(json.dumps({"todos": generate_todos(phases)}, ensure_ascii=False))
+
+
+def print_complete(state: ChainState) -> None:
+    """완료 후 출력"""
+    if state.status == ChainStatus.APPROVED.value:
+        print("APPROVED: 모든 역할 완료")
+        return
+
+    if state.status == ChainStatus.REJECTED.value:
+        print(f"REJECTED: {state.exit_reason}")
+        return
+
+    if state.status == ChainStatus.BRANCHING.value:
+        loop_key = list(state.branch_loops.keys())[-1] if state.branch_loops else ""
+        loops = state.branch_loops.get(loop_key, 1)
+        print(f"BRANCH: {state.branch_active}")
+        print(f"LOOP: {loops}")
+        return
+
+    if state.status == ChainStatus.WAITING_PARALLEL.value:
+        if state.completed_parallel:
+            print(f"PARALLEL_PROGRESS: {', '.join(state.completed_parallel)} 완료")
+        print(f"PENDING: {', '.join(state.pending_roles)}")
+        return
+
+    # 일반 진행
+    if state.pending_roles:
+        if len(state.pending_roles) > 1:
+            print(f"NEXT_PARALLEL: {', '.join(state.pending_roles)}")
+        else:
+            print(f"NEXT: {state.pending_roles[0]}")
+
+
+# =============================================================================
+# CLI
+# =============================================================================
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Sage Orchestrator v3")
-    parser.add_argument("task", nargs="?", help="작업 설명")
-    parser.add_argument("--complete", metavar="ROLE", help="역할 완료 보고")
-    parser.add_argument("--result", default="", help="역할 실행 결과 (분기/거부 판단용)")
-    parser.add_argument("--status", action="store_true", help="현재 상태 출력")
-    parser.add_argument("--reset", action="store_true", help="상태 초기화")
+    parser = argparse.ArgumentParser(
+        description="Sage Orchestrator v4 - 병렬 실행 지원",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+예제:
+  %(prog)s "새 기능 개발"              체인 시작
+  %(prog)s --complete ideator          역할 완료
+  %(prog)s --complete "left,right"     병렬 역할 완료
+  %(prog)s --status                    상태 확인
+  %(prog)s --reset                     초기화
+        """
+    )
+
+    parser.add_argument("task", nargs="?", help="작업 설명 (체인 시작)")
+    parser.add_argument("--complete", "-c", metavar="ROLES",
+                       help="완료된 역할 (쉼표로 구분)")
+    parser.add_argument("--result", "-r", default="pass",
+                       help="역할 실행 결과")
+    parser.add_argument("--status", "-s", action="store_true",
+                       help="현재 상태 출력")
+    parser.add_argument("--reset", action="store_true",
+                       help="상태 초기화")
 
     args = parser.parse_args()
     config = load_config()
-    state = load_state()
 
-    # 상태 초기화
+    # 초기화
     if args.reset:
         clear_state()
-        clear_current_session()  # v3.2
+        clear_session()
         print("RESET: OK")
         return
 
-    # 상태 출력
+    # 상태 확인
     if args.status:
-        chain_type = state.get("chain_type") or state.get("chain")
-        if chain_type:
-            completed_indices = state.get("completed_indices", [])
-            chain_roles = state.get("chain_roles", [])
-            branch_active = state.get("branch_active")
-
-            # v3.1: 종료 상태 확인
-            if state.get("exit_signal") and not state.get("active", True):
-                exit_reason = state.get("exit_reason", "체인 종료")
-                completed_names = [chain_roles[i] for i in completed_indices if i < len(chain_roles)]
-                print(f"CHAIN: {chain_type}")
-                print(f"STATUS: exited")
-                print(f"REASON: {exit_reason}")
-                print(f"COMPLETED: {', '.join(completed_names) or 'none'}")
-                return
-
-            print(f"CHAIN: {chain_type}")
-            print(f"PHASE: {len(completed_indices)}/{len(chain_roles)}")
-
-            # 완료된 역할 표시 (인덱스 기반)
-            completed_names = [chain_roles[i] for i in completed_indices if i < len(chain_roles)]
-            print(f"COMPLETED: {', '.join(completed_names) or 'none'}")
-
-            # 분기 상태
-            if branch_active:
-                branch_loops = state.get("branch_loops", {})
-                print(f"BRANCH_ACTIVE: {branch_active}")
-                print(f"BRANCH_LOOPS: {branch_loops}")
-
-            next_role, next_idx = get_next_role_by_index(state)
-            if next_role:
-                print(f"NEXT: {next_role} (index={next_idx})")
-            elif branch_active:
-                print(f"NEXT: {branch_active} (branch)")
-            else:
-                print("STATUS: all_complete")
+        state = load_state()
+        if state:
+            print_status(state)
         else:
             print("STATUS: idle")
         return
 
-    # 역할 완료 처리
+    # 역할 완료 (원자적 업데이트)
     if args.complete:
-        role = args.complete
-        chain_roles = state.get("chain_roles", [])
-        chain_name = state.get("chain_type") or state.get("chain")
+        # 쉼표로 구분된 역할 파싱
+        roles = [r.strip() for r in args.complete.split(",")]
+        results = {role: args.result for role in roles}
 
-        # 상태 검증: 활성 세션이 있어야 함
-        if not chain_roles or not state.get("active", False):
-            print("ERROR: 활성 세션 없음. 먼저 작업을 시작하세요.")
+        try:
+            state = complete_role_atomic(roles, results, config)
+            print_complete(state)
+        except ValueError as e:
+            print(f"ERROR: {e}")
             sys.exit(1)
-
-        # === v3: Sage 거부 체크 ===
-        if check_sage_rejection(role, args.result):
-            state["exit_signal"] = True
-            state["exit_reason"] = f"Sage 거부: {args.result}"
-            state["active"] = False
-            save_state(state)
-            clear_current_session()  # v3.2
-            print("REJECTED: Sage가 안건을 거부했습니다.")
-            print(f"REASON: {args.result}")
-            return
-
-        # === v3.1: Exit Conditions 체크 (config 기반) ===
-        exit_cond = check_exit_condition(role, args.result, config, chain_name)
-        if exit_cond:
-            state["exit_signal"] = True
-            state["exit_reason"] = exit_cond.get("reason", f"{role} 종료 조건 충족")
-            state["active"] = False
-            save_state(state)
-            clear_current_session()  # v3.2
-            print(f"REJECTED: {exit_cond.get('reason', '종료 조건 충족')}")
-            print(f"ROLE: {role}")
-            print(f"RESULT: {args.result}")
-            return
-
-        # === v3: 분기 역할 완료 처리 ===
-        branch_active = state.get("branch_active")
-        if branch_active and role == branch_active:
-            # 분기 역할 완료 → 원래 역할로 복귀
-            return_index = state.get("branch_return_index")
-            from_role = chain_roles[return_index] if return_index is not None else None
-
-            # 분기 결과 확인: RESOLVED면 원래 역할 재실행, 아니면 분기 반복
-            if "resolved" in args.result.lower() or "pass" in args.result.lower():
-                # 문제 해결됨 → 원래 역할 재실행
-                state["branch_active"] = None
-                state["branch_return_index"] = None
-                state["current_index"] = return_index  # 원래 위치로
-                save_state(state)
-                print(f"BRANCH_RESOLVED: {branch_active}")
-                print(f"RETRY: {from_role} (index={return_index})")
-                return
-            else:
-                # 문제 미해결 → 분기 반복 또는 종료
-                branch_key = from_role
-                branch_loops = state.get("branch_loops", {})
-                current_loops = branch_loops.get(branch_key, 0)
-
-                # max_loops 체크
-                branch_config = get_branch_config(from_role, config, chain_name)
-                max_loops = branch_config.get("max_loops", 2) if branch_config else 2
-
-                if current_loops >= max_loops:
-                    # 최대 반복 초과 → 체인 종료
-                    state["exit_signal"] = True
-                    state["exit_reason"] = f"분기 최대 횟수 초과: {branch_active} ({current_loops}/{max_loops})"
-                    state["active"] = False
-                    save_state(state)
-                    clear_current_session()  # v3.2
-                    print(f"REJECTED: 분기 최대 횟수 초과 ({current_loops}/{max_loops})")
-                    print(f"BRANCH: {branch_active}")
-                    return
-                else:
-                    # 분기 반복 (카운트 증가)
-                    branch_loops[branch_key] = current_loops + 1
-                    state["branch_loops"] = branch_loops
-                    save_state(state)
-                    print(f"BRANCH_RETRY: {branch_active}")
-                    print(f"LOOP: {current_loops + 1}/{max_loops}")
-                    return
-
-        # === 일반 역할 완료 처리 ===
-        current_index = state.get("current_index", 0)
-        completed_indices = state.get("completed_indices", [])
-
-        # === v3: 분기 조건 체크 (완료 처리 전에!) ===
-        branch_config = check_branch_condition(role, args.result, config, chain_name)
-        if branch_config:
-            branch_to = branch_config.get("to")
-            max_loops = branch_config.get("max_loops", 2)
-
-            # 분기 횟수 증가
-            branch_loops = state.get("branch_loops", {})
-            branch_key = role
-            current_loops = branch_loops.get(branch_key, 0) + 1
-            branch_loops[branch_key] = current_loops
-            state["branch_loops"] = branch_loops
-
-            # max_loops 초과 체크
-            if current_loops > max_loops:
-                state["exit_signal"] = True
-                state["exit_reason"] = f"분기 최대 횟수 초과: {branch_to} ({current_loops}/{max_loops})"
-                state["active"] = False
-                save_state(state)
-                clear_current_session()  # v3.2
-                print(f"REJECTED: 분기 최대 횟수 초과 ({current_loops}/{max_loops})")
-                return
-
-            # 분기 활성화 (원래 위치 저장, 완료로 표시하지 않음!)
-            state["branch_active"] = branch_to
-            state["branch_return_index"] = current_index
-            save_state(state)
-            print(f"BRANCH: {branch_to}")
-            print(f"LOOP: {current_loops}/{max_loops}")
-            print(f"RETURN_TO: {role} (index={current_index})")
-            return
-
-        # 분기 없음 → 역할 완료 처리
-        # 현재 역할이 체인의 현재 인덱스와 일치하는지 확인
-        if current_index < len(chain_roles) and chain_roles[current_index] == role:
-            if current_index not in completed_indices:
-                completed_indices.append(current_index)
-                state["completed_indices"] = completed_indices
-
-                # 하위 호환: completed_roles도 업데이트
-                completed_roles = state.get("completed_roles", [])
-                completed_roles.append(f"{role}#{current_index}")
-                state["completed_roles"] = completed_roles
-
-        # 다음 역할으로 진행
-        state["current_index"] = current_index + 1
-        next_role, next_idx = get_next_role_by_index(state)
-        state["current_role"] = next_role
-
-        # 모든 역할 완료 체크
-        if next_role is None:
-            state["exit_signal"] = True
-            state["exit_reason"] = "모든 역할 완료"
-            state["active"] = False
-            save_state(state)
-            clear_current_session()  # v3.2
-            print("APPROVED: 모든 역할 완료")
-            return
-
-        save_state(state)
-        print(f"NEXT: {next_role} (index={next_idx})")
+        except RuntimeError as e:
+            print(f"LOCK_ERROR: {e}")
+            sys.exit(1)
         return
 
-    # 새 작업 시작
+    # 새 체인 시작
     if args.task:
-        # v3.2: 새 세션 생성 (기존 세션 무시)
-        session_id = get_session_id(create_new=True)
-        set_current_session(session_id)
-
-        # 체인 선택
-        chain = select_chain(args.task, config)
-
-        # 체인 역할 목록 조회
-        chains = config.get("chains", {})
-        chain_def = chains.get(chain, {})
-        roles = chain_def.get("roles", [])
-
-        # v3: 인덱스 기반 상태 구조
-        state = {
-            "session_id": session_id,
-            "task": args.task,
-            "chain_type": chain,
-            "chain": chain,  # 하위 호환
-            "chain_roles": roles,
-            "current_index": 0,  # v3
-            "current_role": roles[0] if roles else None,
-            "completed_indices": [],  # v3
-            "completed_roles": [],  # 하위 호환
-            "completed": [],  # 하위 호환
-            "role_outputs": {},
-            "active": True,
-            "exit_signal": False,
-            "started_at": datetime.now().isoformat(),
-            "loop_count": 0,
-            # v3: 분기 상태
-            "branch_active": None,
-            "branch_return_index": None,
-            "branch_loops": {},
-        }
-        save_state(state)
-
-        # 첫 번째 역할
-        next_role, next_idx = get_next_role_by_index(state)
-
-        # 출력
-        print(f"SESSION: {session_id}")
-        print(f"CHAIN: {chain}")
-        print(f"TOTAL_PHASES: {len(roles)}")
-        if next_role:
-            print(f"NEXT: {next_role} (index={next_idx})")
-
-        # TODO JSON 출력 (Claude가 TodoWrite 호출하도록 강제)
-        todos = generate_todos(roles)
-        print("TODO_REQUIRED:")
-        print(json.dumps({"todos": todos}, ensure_ascii=False))
+        state = start_chain(args.task, config)
+        print_start(state)
         return
 
     parser.print_help()

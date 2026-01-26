@@ -1,0 +1,130 @@
+# Sage v4 설정 - 병렬 실행 지원
+#
+# 역할 정의:
+#   - "role"              → 순차 실행
+#   - ["role1", "role2"]  → 병렬 실행 (둘 다 완료해야 다음으로)
+
+chains:
+  FULL:
+    roles:
+      - sage                                          # Phase 1: 안건 접수
+      - ideator                                       # Phase 2: 아이디어 생성
+      - analyst                                       # Phase 3: 분석/선별
+      - critic                                        # Phase 4: 위험/결함 비판
+      - censor                                        # Phase 5: RULES 사전 봉쇄
+      - academy                                       # Phase 6: 학술 자문
+      - architect                                     # Phase 7: 설계 수립
+      - [left-state-councilor, right-state-councilor] # Phase 8: 내정+실무 병렬
+      - sage                                          # Phase 9: 실행 허가
+      - executor                                      # Phase 10: 구현
+      - [inspector, validator]                        # Phase 11: 감찰+검증 병렬
+      - sage                                          # Phase 12: 최종 결재
+      - historian                                     # Phase 13: 기록
+      - [reflector, improver]                         # Phase 14: 회고+개선 병렬
+
+    triggers:
+      keywords: [새로운, 개발, 구현, 기능, 추가, 만들어, new, feature]
+      complexity: [중간, 복잡]
+
+    branches:
+      - from: critic
+        to: ideator
+        condition: [reject, 반려, 거절, 재검토, 보완필요]
+        max_loops: 2
+
+      - from: analyst
+        to: feasibility-checker
+        condition: [uncertain, 불확실, 추가검토, 확인필요]
+        max_loops: 3
+
+      - from: left-state-councilor
+        to: architect
+        condition: [reject, 반려, 재설계]
+        max_loops: 2
+
+      - from: right-state-councilor
+        to: architect
+        condition: [reject, 반려, 재설계]
+        max_loops: 2
+
+      - from: inspector
+        to: executor
+        condition: [reject, 반려, 결함발견]
+        max_loops: 2
+
+      - from: validator
+        to: executor
+        condition: [reject, fail, 테스트실패]
+        max_loops: 2
+
+    exit_conditions:
+      - role: censor
+        keywords: [차단, block, 불가, 금지]
+        reason: "RULES 위반으로 즉시 종료"
+
+      - role: sage
+        keywords: [거부, reject, 불가, 기각]
+        reason: "Sage 거부로 종료"
+
+  QUICK:
+    roles:
+      - critic
+      - architect
+      - executor
+      - [inspector, validator]  # 병렬 검증
+      - historian
+
+    triggers:
+      keywords: [버그, 수정, 고침, 패치, 에러, 오류, fix, bug, hotfix]
+      complexity: [단순, 중간]
+
+    branches: []
+    exit_conditions: []
+
+  REVIEW:
+    roles:
+      - [critic, validator]  # 병렬 리뷰
+
+    triggers:
+      keywords: [검토, 리뷰, 확인, 체크, 점검, review, check]
+      complexity: [단순]
+
+    branches: []
+    exit_conditions: []
+
+  DESIGN:
+    roles:
+      - ideator
+      - analyst
+      - critic
+      - architect
+
+    triggers:
+      keywords: [설계, 아키텍처, 구조, 계획, design, architecture]
+      complexity: [중간, 복잡]
+
+    branches:
+      - from: analyst
+        to: feasibility-checker
+        condition: [uncertain, 불확실]
+        max_loops: 3
+
+    exit_conditions: []
+
+  RESEARCH:
+    roles:
+      - [ideator, academy]  # 병렬 조사
+      - analyst
+      - critic
+
+    triggers:
+      keywords: [조사, 연구, 탐색, research, explore, investigate]
+      complexity: [단순, 중간]
+
+    branches: []
+    exit_conditions: []
+
+defaults:
+  fallback_chain: FULL
+  max_total_branches: 5
+  timeout_minutes: 60
