@@ -53,6 +53,42 @@ def _serialize_for_redis(data: dict[str, Any]) -> dict[str, Any]:
     return processed
 
 
+def _deserialize_from_redis(
+    data: dict[Any, Any], json_fields: list[str] | None = None
+) -> dict[str, Any]:
+    """Redis HGETALL 결과 역직렬화.
+
+    bytes 디코딩, 빈 문자열→None, bool 문자열→bool, JSON 필드 파싱.
+    """
+    if json_fields is None:
+        json_fields = []
+
+    result = {}
+    for k, v in data.items():
+        # bytes 디코딩
+        key_str = k.decode() if isinstance(k, bytes) else k
+        val = v.decode() if isinstance(v, bytes) else v
+
+        # 빈 문자열 → None 복원
+        if val == "":
+            result[key_str] = None
+        # bool 복원
+        elif val == "true":
+            result[key_str] = True
+        elif val == "false":
+            result[key_str] = False
+        # JSON 필드 파싱
+        elif key_str in json_fields:
+            try:
+                result[key_str] = json.loads(val)
+            except (json.JSONDecodeError, TypeError):
+                result[key_str] = val
+        else:
+            result[key_str] = val
+
+    return result
+
+
 class InMemoryStore:
     """메모리 기반 저장소 (Redis fallback)"""
 
@@ -163,31 +199,7 @@ class RedisAdapter:
         if not data:
             return None
 
-        # Redis에서 조회 시 bytes → str 변환 및 타입 복원
-        result = {}
-        for k, v in data.items():
-            # bytes 디코딩
-            key_str = k.decode() if isinstance(k, bytes) else k
-            val = v.decode() if isinstance(v, bytes) else v
-
-            # 빈 문자열 → None 복원
-            if val == "":
-                result[key_str] = None
-            # bool 복원
-            elif val == "true":
-                result[key_str] = True
-            elif val == "false":
-                result[key_str] = False
-            # JSON 필드 파싱
-            elif key_str in ["analysis", "completed_roles"]:
-                try:
-                    result[key_str] = json.loads(val)
-                except (json.JSONDecodeError, TypeError):
-                    result[key_str] = val
-            else:
-                result[key_str] = val
-
-        return result
+        return _deserialize_from_redis(data, json_fields=["analysis", "completed_roles"])
 
     async def update_session(self, session_id: str, updates: dict[str, Any]) -> None:
         """세션 업데이트"""
@@ -256,15 +268,7 @@ class RedisAdapter:
         if not data:
             return None
 
-        # JSON 필드 파싱
-        for k in ["roles", "completed_roles", "loop_counts"]:
-            if k in data and data[k]:
-                try:
-                    data[k] = json.loads(data[k])
-                except (json.JSONDecodeError, TypeError):
-                    pass
-
-        return dict(data)
+        return _deserialize_from_redis(data, json_fields=["roles", "completed_roles", "loop_counts"])
 
     async def update_chain_state(self, session_id: str, updates: dict[str, Any]) -> None:
         """체인 상태 업데이트"""
