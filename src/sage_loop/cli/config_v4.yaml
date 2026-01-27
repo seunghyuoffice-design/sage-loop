@@ -5,22 +5,29 @@
 #   - ["role1", "role2"]  → 병렬 실행 (둘 다 완료해야 다음으로)
 
 chains:
+  # ==========================================================================
+  # FULL 체인 v5 - 6조 병렬 + 삼정승 병렬 + 조건부 승인 지원
+  # ==========================================================================
   FULL:
     roles:
-      - sage                                          # Phase 1: 안건 접수
-      - ideator                                       # Phase 2: 아이디어 생성
-      - analyst                                       # Phase 3: 분석/선별
-      - critic                                        # Phase 4: 위험/결함 비판
-      - censor                                        # Phase 5: RULES 사전 봉쇄
-      - academy                                       # Phase 6: 학술 자문
-      - architect                                     # Phase 7: 설계 수립
-      - [left-state-councilor, right-state-councilor] # Phase 8: 내정+실무 병렬
-      - sage                                          # Phase 9: 실행 허가
-      - executor                                      # Phase 10: 구현
-      - [inspector, validator]                        # Phase 11: 감찰+검증 병렬
-      - sage                                          # Phase 12: 최종 결재
-      - historian                                     # Phase 13: 기록
-      - [reflector, improver]                         # Phase 14: 회고+개선 병렬
+      # === 안건 발의 단계 ===
+      - [ideator-personnel, ideator-finance, ideator-rites, ideator-military, ideator-justice, ideator-works]  # Phase 1: 6조 낭청 안건 초안
+      - [analyst-personnel, analyst-finance, analyst-rites, analyst-military, analyst-justice, analyst-works]  # Phase 2: 6조 판서 검토/상신
+      - architect                                     # Phase 3: 도승지 형식화
+      - [seungji-personnel, seungji-finance, seungji-rites, seungji-military, seungji-justice, seungji-works]  # Phase 4: 6조별 승지 전달
+      # === 심의 단계 ===
+      - [critic, censor, academy]                     # Phase 5: 삼사 독립 언론
+      - [left-state-councilor, right-state-councilor]  # Phase 6: 좌우의정 심의
+      - yeong-ui-jeong                                # Phase 7: 영의정 결재
+      - uigeumbu                                      # Phase 8: 의금부 (RULES 컴플라이언스, 법제처)
+      # === 실행 단계 ===
+      - architect                                     # Phase 9: 도승지 결정 하달
+      - [executor-personnel, executor-finance, executor-rites, executor-military, executor-justice, executor-works]  # Phase 10: 6조 집행
+      - [inspector, validator]                        # Phase 11: 감찰+검증
+      # === 종결 단계 ===
+      - [left-state-councilor, right-state-councilor]  # Phase 12: 좌우의정 결과 보고 접수
+      - yeong-ui-jeong                                # Phase 13: 영의정 종결 승인
+      - historian                                     # Phase 14: 사관 기록
 
     triggers:
       keywords: [새로운, 개발, 구현, 기능, 추가, 만들어, new, feature]
@@ -28,41 +35,62 @@ chains:
 
     branches:
       - from: critic
-        to: ideator
+        to: ideator-personnel  # 6조 낭청 재검토 시작점
         condition: [reject, 반려, 거절, 재검토, 보완필요]
-        max_loops: 2
+        max_loops: 3
 
-      - from: analyst
+      # 6조 판서 분석 → 가능성 검증
+      - from: analyst-personnel
+        to: feasibility-checker
+        condition: [uncertain, 불확실, 추가검토, 확인필요]
+        max_loops: 3
+      - from: analyst-finance
+        to: feasibility-checker
+        condition: [uncertain, 불확실, 추가검토, 확인필요]
+        max_loops: 3
+      - from: analyst-rites
+        to: feasibility-checker
+        condition: [uncertain, 불확실, 추가검토, 확인필요]
+        max_loops: 3
+      - from: analyst-military
+        to: feasibility-checker
+        condition: [uncertain, 불확실, 추가검토, 확인필요]
+        max_loops: 3
+      - from: analyst-justice
+        to: feasibility-checker
+        condition: [uncertain, 불확실, 추가검토, 확인필요]
+        max_loops: 3
+      - from: analyst-works
         to: feasibility-checker
         condition: [uncertain, 불확실, 추가검토, 확인필요]
         max_loops: 3
 
+      # 삼정승 반려 → 재설계
       - from: left-state-councilor
         to: architect
         condition: [reject, 반려, 재설계]
-        max_loops: 2
-
+        max_loops: 3
       - from: right-state-councilor
         to: architect
         condition: [reject, 반려, 재설계]
-        max_loops: 2
+        max_loops: 3
 
+      # 검증 반려 → 재구현
       - from: inspector
         to: executor
         condition: [reject, 반려, 결함발견]
-        max_loops: 2
-
+        max_loops: 3
       - from: validator
         to: executor
         condition: [reject, fail, 테스트실패]
-        max_loops: 2
+        max_loops: 3
 
     exit_conditions:
       - role: censor
         keywords: [차단, block, 불가, 금지]
         reason: "RULES 위반으로 즉시 종료"
 
-      - role: sage
+      - role: yeong-ui-jeong
         keywords: [거부, reject, 불가, 기각]
         reason: "Sage 거부로 종료"
 

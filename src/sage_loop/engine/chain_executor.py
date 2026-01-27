@@ -41,21 +41,32 @@ from .role_runner import RoleRunner
 logger = logging.getLogger(__name__)
 
 
-# 기본 체인 정의 (CLAUDE.md SAGE_LOOP 기준)
+# 기본 체인 정의 (CLAUDE.md SAGE_LOOP v3.2 TRIPLE SAGE 기준)
+# NOTE: config.yaml이 있으면 거기서 로드됨. 이 값은 폴백용.
 DEFAULT_CHAINS = {
     ChainType.FULL: {
         "roles": [
+            # Phase 1: Sage 접수 (안건 접수)
+            "sage",
+            # Phase 2-7: 발산 & 수렴
             "ideator",
             "analyst",
             "critic",
             "censor",
             "academy",
             "architect",
+            # Phase 8-9: 의정부 심의 (병렬)
             "left-state-councilor",
             "right-state-councilor",
+            # Phase 10: Sage 허가 (실행 허가)
+            "sage",
+            # Phase 11-13: 실행 & 검증
             "executor",
             "inspector",
             "validator",
+            # Phase 14: Sage 결재 (최종 결재)
+            "sage",
+            # Phase 15-17: 사후 처리
             "historian",
             "reflector",
             "improver",
@@ -67,7 +78,15 @@ DEFAULT_CHAINS = {
         },
     },
     ChainType.QUICK: {
-        "roles": ["critic", "architect", "executor", "validator", "historian"],
+        "roles": [
+            "sage",  # 접수
+            "critic",
+            "architect",
+            "executor",
+            "validator",
+            "sage",  # 결재
+            "historian",
+        ],
         "triggers": {
             "keywords": ["버그", "수정", "고침", "패치", "에러", "오류"],
             "complexity": ["단순", "중간"],
@@ -83,7 +102,13 @@ DEFAULT_CHAINS = {
         },
     },
     ChainType.DESIGN: {
-        "roles": ["ideator", "analyst", "critic", "architect"],
+        "roles": [
+            "sage",  # 접수
+            "ideator",
+            "analyst",
+            "critic",
+            "architect",
+        ],
         "triggers": {
             "keywords": ["설계", "아키텍처", "구조", "계획", "방향"],
             "complexity": ["중간", "복잡"],

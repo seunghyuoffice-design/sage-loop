@@ -13,8 +13,15 @@ from .config import get_hook_config
 
 
 def generate_session_id() -> str:
-    """UUID4 기반 8자리 세션 ID 생성"""
-    return uuid.uuid4().hex[:8]
+    """UUID4 기반 표준 세션 ID 생성
+
+    형식: sage-{uuid4[:12]}
+    예시: sage-a1b2c3d4e5f6
+
+    Returns:
+        17자리 세션 ID (prefix 5 + uuid 12)
+    """
+    return f"sage-{uuid.uuid4().hex[:12]}"
 
 
 def get_session_id() -> str:
@@ -35,11 +42,11 @@ def get_session_id() -> str:
 
     # 2. 기존 세션 파일 확인 (가장 최근 것)
     config = get_hook_config()
-    session_files = list(config.state_dir.glob("sage_loop_state_*.json"))
+    session_files = list(config.state_dir.glob("sage_state_*.json"))
     if session_files:
         # 가장 최근 파일에서 세션 ID 추출
         latest = max(session_files, key=lambda f: f.stat().st_mtime)
-        session_id = latest.stem.replace("sage_loop_state_", "")
+        session_id = latest.stem.replace("sage_state_", "")
         if session_id and len(session_id) == 8:
             return session_id
 
@@ -58,7 +65,7 @@ def cleanup_session(session_id: str) -> None:
     config = get_hook_config()
 
     patterns = [
-        f"sage_loop_state_{session_id}.json",
+        f"sage_state_{session_id}.json",
         f"sage_circuit_breaker_{session_id}.json",
         f"sage_errors_{session_id}.log",
     ]
@@ -87,7 +94,7 @@ def cleanup_old_sessions(max_age_hours: int = 24) -> int:
 
     # 모든 Sage 관련 임시 파일 검색
     patterns = [
-        "sage_loop_state_*.json",
+        "sage_state_*.json",
         "sage_circuit_breaker_*.json",
         "sage_errors_*.log",
     ]

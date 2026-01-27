@@ -241,7 +241,7 @@ python3 feedback_checker.py
 | 변수 | 기본값 | 설명 |
 |------|--------|------|
 | `SAGE_STATE_DIR` | `/tmp` | 상태 파일 디렉토리 |
-| `SAGE_PROJECT_ROOT` | `/home/rovers/Dyarchy-v3` | 프로젝트 루트 |
+| `SAGE_PROJECT_ROOT` | `~/Dyarchy-v3` | 프로젝트 루트 |
 | `SAGE_MAX_LOOPS` | 50 | 최대 루프 횟수 |
 | `SAGE_SESSION_TIMEOUT` | 3600 | 세션 타임아웃 (초) |
 | `SAGE_SESSION_ID` | (자동) | 세션 ID |

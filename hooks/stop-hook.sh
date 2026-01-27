@@ -11,7 +11,7 @@
 #
 # 환경변수:
 #   SAGE_STATE_DIR: 상태 파일 디렉토리 (기본: /tmp)
-#   SAGE_PROJECT_ROOT: 프로젝트 루트 (기본: /home/rovers/Dyarchy-v3)
+#   SAGE_PROJECT_ROOT: 프로젝트 루트 (기본: ~/Dyarchy-v3)
 #   SAGE_MAX_LOOPS: 최대 루프 횟수 (기본: 50)
 #   SAGE_SESSION_TIMEOUT: 세션 타임아웃 초 (기본: 3600)
 #   SAGE_SESSION_ID: 세션 ID (없으면 자동 생성)
@@ -21,7 +21,7 @@ set -e
 
 # 환경변수 기반 설정
 STATE_DIR="${SAGE_STATE_DIR:-/tmp}"
-PROJECT_ROOT="${SAGE_PROJECT_ROOT:-/home/rovers/Dyarchy-v3}"
+PROJECT_ROOT="${SAGE_PROJECT_ROOT:-$HOME/Dyarchy-v3}"
 MAX_LOOPS="${SAGE_MAX_LOOPS:-50}"
 SESSION_TIMEOUT="${SAGE_SESSION_TIMEOUT:-3600}"
 

@@ -26,8 +26,13 @@ class TaskType(Enum):
 
 
 @dataclass
-class TaskAnalysis:
-    """안건 분석 결과"""
+class DispatchAnalysis:
+    """역할 디스패치 분석 결과
+
+    NOTE: schemas.py의 TaskAnalysis와 구분됨.
+    - TaskAnalysis: 체인 선택용 (task_type, complexity, risk)
+    - DispatchAnalysis: 역할 라우팅용 (ministries, roles)
+    """
 
     task_type: TaskType
     primary_councilor: CouncilorType
@@ -84,7 +89,7 @@ class RoleDispatcher:
         "dashboard",
     ]
 
-    def analyze_task(self, task_description: str) -> TaskAnalysis:
+    def analyze_task(self, task_description: str) -> DispatchAnalysis:
         """안건 분석"""
         task_lower = task_description.lower()
 
@@ -123,7 +128,7 @@ class RoleDispatcher:
             ministries = [military]
             roles = [r for r in military.roles if r.name == "executor"]
 
-        return TaskAnalysis(
+        return DispatchAnalysis(
             task_type=task_type,
             primary_councilor=primary_councilor,
             ministries=ministries,
@@ -131,7 +136,7 @@ class RoleDispatcher:
             keywords=keywords,
         )
 
-    def get_execution_chain(self, analysis: TaskAnalysis) -> list[RoleSpec]:
+    def get_execution_chain(self, analysis: DispatchAnalysis) -> list[RoleSpec]:
         """실행 체인 생성 (역할 실행 순서)"""
         chain = []
 

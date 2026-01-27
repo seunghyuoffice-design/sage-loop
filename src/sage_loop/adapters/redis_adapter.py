@@ -14,6 +14,7 @@ Fallback: Redis 연결 실패 시 메모리 모드로 동작
 
 import json
 import logging
+import os
 from datetime import datetime
 from typing import Any, Optional
 
@@ -96,7 +97,10 @@ class RedisAdapter:
                 await self._client.ping()
                 logger.info("Redis connected")
             except Exception as e:
-                logger.warning(f"Redis connection failed, using memory mode: {e}")
+                # SAGE_REQUIRE_REDIS=1 설정 시 Redis 필수
+                if os.environ.get("SAGE_REQUIRE_REDIS", "0") == "1":
+                    raise RuntimeError(f"Redis connection required but failed: {e}")
+                logger.warning(f"Redis connection failed, using memory mode (data will not persist): {e}")
                 self._use_memory = True
                 self._client = None
 

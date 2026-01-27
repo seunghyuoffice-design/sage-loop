@@ -1,6 +1,6 @@
 """Sage Orchestrator - FastAPI 기반 역할 오케스트레이션 서비스"""
 
-__version__ = "1.2.0"  # 환경 하드코딩 제거, 코드 품질 개선
+__version__ = "1.2.1"  # 세션 ID 통합, 체인 정의 통합, yeong-ui-jeong 리팩토링
 
 # Claude Code Integration - YAML Export
 from .engine.compact_checkpoint import (

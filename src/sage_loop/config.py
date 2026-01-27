@@ -168,7 +168,7 @@ def reset_hook_config() -> None:
 def get_state_file_path(session_id: str) -> Path:
     """상태 파일 경로 반환"""
     config = get_hook_config()
-    return config.state_dir / f"sage_loop_state_{session_id}.json"
+    return config.state_dir / f"sage_state_{session_id}.json"
 
 
 def get_circuit_breaker_path(session_id: str) -> Path:

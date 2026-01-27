@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import argparse
 import fcntl
-import hashlib
 import json
 import os
 import sys
@@ -30,9 +29,12 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Callable, Optional, Union
+from typing import Callable, Optional
 
 import yaml
+
+# 세션 ID 생성은 session.py에서 통합 관리
+from ..session import generate_session_id as _generate_session_id
 
 
 # =============================================================================
@@ -56,7 +58,7 @@ class ChainStatus(str, Enum):
 
 # 역할 설명 (TodoWrite용)
 ROLE_INFO = {
-    "sage": ("영의정 심의", "영의정 심의 중"),
+    "yeong-ui-jeong": ("영의정 심의", "영의정 심의 중"),
     "ideator": ("아이디어 생성", "아이디어 생성 중"),
     "analyst": ("분석/선별", "분석 중"),
     "critic": ("위험/결함 비판", "비판 검토 중"),
@@ -72,8 +74,22 @@ ROLE_INFO = {
     "reflector": ("회고", "회고 중"),
     "improver": ("개선", "개선 중"),
     "feasibility-checker": ("실현 가능성 검증", "가능성 검증 중"),
-    "constraint-enforcer": ("제약 조건 강제", "제약 검증 중"),
+    "constraint-enforcer": ("조건부 승인 조건 해결", "조건 해결 중"),
     "policy-keeper": ("정책 관리", "정책 검토 중"),
+    # 6조 낭청 (ideator)
+    "ideator-personnel": ("이조 아이디어 (인사)", "이조 아이디어 생성 중"),
+    "ideator-finance": ("호조 아이디어 (재정)", "호조 아이디어 생성 중"),
+    "ideator-rites": ("예조 아이디어 (문화)", "예조 아이디어 생성 중"),
+    "ideator-military": ("병조 아이디어 (운영)", "병조 아이디어 생성 중"),
+    "ideator-justice": ("형조 아이디어 (검증)", "형조 아이디어 생성 중"),
+    "ideator-works": ("공조 아이디어 (인프라)", "공조 아이디어 생성 중"),
+    # 6조 판서 (analyst)
+    "analyst-personnel": ("이조 분석 (인사)", "이조 분석 중"),
+    "analyst-finance": ("호조 분석 (재정)", "호조 분석 중"),
+    "analyst-rites": ("예조 분석 (문화)", "예조 분석 중"),
+    "analyst-military": ("병조 분석 (운영)", "병조 분석 중"),
+    "analyst-justice": ("형조 분석 (검증)", "형조 분석 중"),
+    "analyst-works": ("공조 분석 (인프라)", "공조 분석 중"),
 }
 
 
@@ -119,6 +135,9 @@ class ChainState:
     # 역할별 결과 저장
     role_results: dict = field(default_factory=dict)
 
+    # 조건부 승인 조건 수집 (방안 B)
+    pending_conditions: list = field(default_factory=list)
+
     # 메타데이터
     started_at: str = ""
     exit_reason: str = ""
@@ -134,10 +153,6 @@ class ChainState:
 # =============================================================================
 # Session Management
 # =============================================================================
-
-def generate_session_id() -> str:
-    ts = str(time.time()).encode()
-    return f"v4-{hashlib.sha256(ts).hexdigest()[:8]}"
 
 
 def get_session_id(create_new: bool = False) -> str:
@@ -155,7 +170,7 @@ def get_session_id(create_new: bool = False) -> str:
                 return stored
 
     # 3. 새 ID 생성
-    new_id = generate_session_id()
+    new_id = _generate_session_id()
     os.environ["SAGE_SESSION_ID"] = new_id
     return new_id
 
@@ -172,7 +187,7 @@ def clear_session() -> None:
 
 
 def get_state_path() -> Path:
-    return STATE_DIR / f"sage_v4_{get_session_id()}.json"
+    return STATE_DIR / f"sage_state_{get_session_id()}.json"
 
 
 # =============================================================================
@@ -392,7 +407,7 @@ def check_exit(role: str, result: str, config: dict, chain_name: str) -> Optiona
 
 def start_chain(task: str, config: dict) -> ChainState:
     """새 체인 시작"""
-    session_id = generate_session_id()
+    session_id = _generate_session_id()
     set_session(session_id)
 
     chain_name = select_chain(task, config)
@@ -425,14 +440,41 @@ def start_chain(task: str, config: dict) -> ChainState:
     return state
 
 
+def _extract_conditions(result: str) -> list[str]:
+    """조건부 승인에서 조건들을 추출"""
+    import re
+    conditions = []
+    # 패턴: "조건부승인: 조건1, 조건2" 또는 "conditional: cond1, cond2"
+    patterns = [
+        r"조건부\s*승인[:\s]+(.+?)(?:\n|$)",
+        r"conditional[:\s]+(.+?)(?:\n|$)",
+        r"조건[:\s]+(.+?)(?:\n|$)",
+    ]
+    for pattern in patterns:
+        matches = re.findall(pattern, result, re.IGNORECASE)
+        for match in matches:
+            # 쉼표나 세미콜론으로 분리
+            parts = re.split(r"[,;]", match)
+            conditions.extend([p.strip() for p in parts if p.strip()])
+    return conditions
+
+
 def _complete_role_impl(state: ChainState, roles: list[str], results: dict[str, str], config: dict) -> ChainState:
     """역할 완료 처리 (내부 구현, 저장 없음)"""
     phase_data = state.phases[state.current_phase]
     phase = PhaseItem(**phase_data)
 
-    # 결과 저장
+    # 결과 저장 + 조건부 승인 조건 수집 (방안 B)
     for role, result in results.items():
         state.role_results[role] = result
+        # 조건부 승인 조건 추출
+        conditions = _extract_conditions(result)
+        if conditions:
+            for cond in conditions:
+                state.pending_conditions.append({
+                    "from_role": role,
+                    "condition": cond,
+                })
 
     # 분기/종료 체크 (각 역할별)
     for role, result in results.items():
@@ -508,6 +550,20 @@ def _complete_role_impl(state: ChainState, roles: list[str], results: dict[str, 
     # 다음 phase 설정
     next_phase_data = state.phases[state.current_phase]
     next_phase = PhaseItem(**next_phase_data)
+
+    # 방안 B: constraint-enforcer는 조건이 있을 때만 실행
+    if "constraint-enforcer" in next_phase.roles and not state.pending_conditions:
+        # 조건 없으면 스킵
+        state.completed_phases.append(state.current_phase)
+        state.current_phase += 1
+        if state.current_phase >= len(state.phases):
+            state.status = ChainStatus.APPROVED.value
+            state.exit_reason = "모든 역할 완료"
+            clear_session()
+            return state
+        next_phase_data = state.phases[state.current_phase]
+        next_phase = PhaseItem(**next_phase_data)
+
     state.pending_roles = next_phase.roles.copy()
 
     if next_phase.is_parallel:
@@ -642,6 +698,12 @@ def print_complete(state: ChainState) -> None:
             print(f"NEXT_PARALLEL: {', '.join(state.pending_roles)}")
         else:
             print(f"NEXT: {state.pending_roles[0]}")
+
+    # 방안 B: 조건부 승인 조건 출력
+    if state.pending_conditions and "constraint-enforcer" in state.pending_roles:
+        print("PENDING_CONDITIONS:")
+        for cond in state.pending_conditions:
+            print(f"  - [{cond['from_role']}] {cond['condition']}")
 
 
 # =============================================================================

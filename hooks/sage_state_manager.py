@@ -16,7 +16,7 @@ from pathlib import Path
 
 # 상태 파일 경로
 STATE_DIR = Path(os.environ.get("SAGE_STATE_DIR", "/tmp"))
-PROJECT_ROOT = Path(os.environ.get("SAGE_PROJECT_ROOT", "/home/rovers/Dyarchy-v3"))
+PROJECT_ROOT = Path(os.environ.get("SAGE_PROJECT_ROOT", str(Path.home() / "Dyarchy-v3")))
 
 # 체인 정의 (config.yaml에서 로드 가능)
 CHAINS = {

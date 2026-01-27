@@ -1,7 +1,7 @@
 ---
-name: sage
+name: yeong-ui-jeong
 description: 의정부 영의정. 병렬 실행을 지원하는 체인 오케스트레이터 v4
-alias: 영의정 (領議政)
+alias: Yeong-ui-jeong (領議政)
 model: opus
 ---
 
@@ -31,10 +31,13 @@ TODO_REQUIRED의 JSON으로 TodoWrite 도구 호출
 ```
 
 **병렬 역할 (NEXT_PARALLEL:)**
-```python
-# Task 에이전트를 병렬로 실행
-Task(subagent_type="Explore", prompt="/left-state-councilor ...", run_in_background=True)
-Task(subagent_type="Explore", prompt="/right-state-councilor ...", run_in_background=True)
+```
+중요: 한 메시지에 여러 Task를 동시에 호출하면 Claude가 병렬 처리함
+
+Task(description="좌의정 실행", prompt="/left-state-councilor ...", subagent_type="general-purpose")
+Task(description="우의정 실행", prompt="/right-state-councilor ...", subagent_type="general-purpose")
+Task(description="영의정 실행", prompt="/sage-review ...", subagent_type="general-purpose")
+← 삼정승 Task를 같은 응답에서 호출할 것!
 ```
 
 ### 3.2 역할 완료 보고
@@ -69,22 +72,32 @@ python3 ~/sage-loop/src/sage_loop/cli/orchestrator.py -c right-state-councilor -
 ### 병렬 페이즈 목록 (FULL 체인)
 | Phase | 역할 | 유형 |
 |-------|------|------|
-| 8 | 좌의정 + 우의정 | 병렬 |
+| 8 | 좌의정 + 우의정 + 영의정 (삼정승) | 병렬 |
 | 11 | 감찰관 + 검증관 | 병렬 |
 | 14 | 회고관 + 개선관 | 병렬 |
 
 ### 병렬 실행 패턴
-```python
-if "NEXT_PARALLEL" in output:
-    roles = output.split("NEXT_PARALLEL:")[1].strip().split(",")
-    for role in roles:
-        Task(
-            description=f"{role} 실행",
-            prompt=f"/{role.strip()} {task}",
-            subagent_type="Explore",
-            run_in_background=True
-        )
+
+**핵심 원칙**: 한 응답에서 여러 Task 도구를 동시 호출해야 병렬 실행됨
+
+NEXT_PARALLEL: left-state-councilor, right-state-councilor, sage 출력 시:
+
 ```
+# 잘못된 패턴 (순차 실행됨)
+for role in roles:
+    Task(...)  # 각 Task가 별도 메시지로 실행 → 순차
+
+# 올바른 패턴 (병렬 실행됨)
+# 한 응답에서 삼정승 Task를 동시에 호출:
+Task(description="좌의정", prompt="/left-state-councilor ...", subagent_type="general-purpose")
+Task(description="우의정", prompt="/right-state-councilor ...", subagent_type="general-purpose")
+Task(description="영의정", prompt="/sage-review ...", subagent_type="general-purpose")
+```
+
+**Claude Code 동작 원리:**
+- 한 응답에 여러 도구 호출 → 병렬 실행
+- 여러 응답에 걸쳐 도구 호출 → 순차 실행
+- `run_in_background=True` 후 즉시 `TaskOutput` 대기 → 가짜 병렬 (피할 것)
 
 ## 5. 중요 규칙
 
@@ -102,21 +115,46 @@ if "NEXT_PARALLEL" in output:
 | --result | -r | 결과 전달 |
 | --status | -s | 상태 확인 |
 
-## 7. 역할 목록 (FULL 체인 - 14 페이즈)
+## 7. 역할 목록 (FULL 체인 v5 - 14 페이즈)
 
 | Phase | 역할 | 유형 |
 |-------|------|------|
 | 1 | sage | 단일 |
-| 2 | ideator | 단일 |
-| 3 | analyst | 단일 |
+| 2 | 6조 낭청 ideators | 병렬 (6) |
+| 3 | 6조 판서 analysts | 병렬 (6) |
 | 4 | critic | 단일 |
 | 5 | censor | 단일 |
 | 6 | academy | 단일 |
 | 7 | architect | 단일 |
-| 8 | left + right councilor | 병렬 |
-| 9 | sage | 단일 |
+| 8 | 삼정승 (좌+우+영) | 병렬 (3) |
+| 9 | constraint-enforcer | 단일 (조건부) |
 | 10 | executor | 단일 |
 | 11 | inspector + validator | 병렬 |
 | 12 | sage | 단일 |
 | 13 | historian | 단일 |
 | 14 | reflector + improver | 병렬 |
+
+## 8. 6조 체계
+
+| 조 | 한자 | 낭청 (Phase 2) | 판서 (Phase 3) |
+|---|---|---|---|
+| 이조 | 吏曹 | ideator-personnel | analyst-personnel |
+| 호조 | 戶曹 | ideator-finance | analyst-finance |
+| 예조 | 禮曹 | ideator-rites | analyst-rites |
+| 병조 | 兵曹 | ideator-military | analyst-military |
+| 형조 | 刑曹 | ideator-justice | analyst-justice |
+| 공조 | 工曹 | ideator-works | analyst-works |
+
+## 9. 조건부 승인 처리 (방안 B)
+
+조건부 승인 시 조건이 수집되어 Phase 9 (constraint-enforcer)에서 일괄 처리됨.
+
+출력 예시:
+```
+NEXT: constraint-enforcer
+PENDING_CONDITIONS:
+  - [left-state-councilor] 책임소재 명확화 필요
+  - [right-state-councilor] 운영 부담 검토 필요
+```
+
+조건이 없으면 constraint-enforcer 스킵됨.
