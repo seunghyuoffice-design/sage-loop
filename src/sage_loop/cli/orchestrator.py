@@ -405,12 +405,18 @@ def check_exit(role: str, result: str, config: dict, chain_name: str) -> Optiona
 # Core Logic
 # =============================================================================
 
-def start_chain(task: str, config: dict) -> ChainState:
-    """새 체인 시작"""
+def start_chain(task: str, config: dict, force_chain: str = None) -> ChainState:
+    """새 체인 시작
+
+    Args:
+        task: 작업 설명
+        config: 설정
+        force_chain: 강제 체인 이름 (None이면 자동 선택)
+    """
     session_id = _generate_session_id()
     set_session(session_id)
 
-    chain_name = select_chain(task, config)
+    chain_name = force_chain if force_chain else select_chain(task, config)
     chains = config.get("chains", {})
     chain_cfg = chains.get(chain_name, {})
     roles_config = chain_cfg.get("roles", [])
@@ -716,7 +722,8 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 예제:
-  %(prog)s "새 기능 개발"              체인 시작
+  %(prog)s "새 기능 개발"              체인 시작 (자동 선택)
+  %(prog)s --chain FULL "작업 내용"    풀체인 강제
   %(prog)s --complete ideator          역할 완료
   %(prog)s --complete "left,right"     병렬 역할 완료
   %(prog)s --status                    상태 확인
@@ -733,6 +740,8 @@ def main() -> None:
                        help="현재 상태 출력")
     parser.add_argument("--reset", action="store_true",
                        help="상태 초기화")
+    parser.add_argument("--chain", choices=["FULL", "QUICK", "REVIEW", "DESIGN"],
+                       help="체인 강제 지정 (기본: 키워드 기반 자동 선택)")
 
     args = parser.parse_args()
     config = load_config()
@@ -772,7 +781,7 @@ def main() -> None:
 
     # 새 체인 시작
     if args.task:
-        state = start_chain(args.task, config)
+        state = start_chain(args.task, config, force_chain=args.chain)
         print_start(state)
         return
 
