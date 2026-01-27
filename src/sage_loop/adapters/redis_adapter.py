@@ -118,13 +118,19 @@ class RedisAdapter:
 
     async def save_session(self, session_id: str, data: dict[str, Any]) -> None:
         """세션 저장"""
-        # datetime을 ISO 문자열로 변환
+        # datetime/dict/None을 Redis 호환 타입으로 변환
         processed = {}
         for k, v in data.items():
-            if isinstance(v, datetime):
+            if v is None:
+                processed[k] = ""  # None → 빈 문자열
+            elif isinstance(v, datetime):
                 processed[k] = v.isoformat()
             elif isinstance(v, dict):
                 processed[k] = json.dumps(v)
+            elif isinstance(v, list):
+                processed[k] = json.dumps(v)  # list도 JSON으로
+            elif isinstance(v, bool):
+                processed[k] = str(v).lower()  # bool → "true"/"false"
             else:
                 processed[k] = v
 
@@ -151,25 +157,47 @@ class RedisAdapter:
         if not data:
             return None
 
-        # JSON 필드 파싱
-        for k in ["analysis"]:
-            if k in data and data[k]:
-                try:
-                    data[k] = json.loads(data[k])
-                except (json.JSONDecodeError, TypeError):
-                    pass
+        # Redis에서 조회 시 bytes → str 변환 및 타입 복원
+        result = {}
+        for k, v in data.items():
+            # bytes 디코딩
+            key_str = k.decode() if isinstance(k, bytes) else k
+            val = v.decode() if isinstance(v, bytes) else v
 
-        return dict(data)
+            # 빈 문자열 → None 복원
+            if val == "":
+                result[key_str] = None
+            # bool 복원
+            elif val == "true":
+                result[key_str] = True
+            elif val == "false":
+                result[key_str] = False
+            # JSON 필드 파싱
+            elif key_str in ["analysis", "completed_roles"]:
+                try:
+                    result[key_str] = json.loads(val)
+                except (json.JSONDecodeError, TypeError):
+                    result[key_str] = val
+            else:
+                result[key_str] = val
+
+        return result
 
     async def update_session(self, session_id: str, updates: dict[str, Any]) -> None:
         """세션 업데이트"""
-        # datetime을 ISO 문자열로 변환
+        # datetime/dict/None을 Redis 호환 타입으로 변환
         processed = {}
         for k, v in updates.items():
-            if isinstance(v, datetime):
+            if v is None:
+                processed[k] = ""  # None → 빈 문자열
+            elif isinstance(v, datetime):
                 processed[k] = v.isoformat()
             elif isinstance(v, dict):
                 processed[k] = json.dumps(v)
+            elif isinstance(v, list):
+                processed[k] = json.dumps(v)  # list도 JSON으로
+            elif isinstance(v, bool):
+                processed[k] = str(v).lower()  # bool → "true"/"false"
             else:
                 processed[k] = v
 
