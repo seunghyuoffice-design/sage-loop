@@ -308,7 +308,9 @@ class RedisAdapter:
             data = await client.get(key)
             if not data:
                 return None
-            return json.loads(data)
+            # bytes → str 디코딩 후 JSON 파싱
+            data_str = data.decode() if isinstance(data, bytes) else data
+            return json.loads(data_str)
         else:
             # 메모리 모드
             return self._memory.roles.get(f"{session_id}:{role}")
@@ -325,10 +327,14 @@ class RedisAdapter:
 
             result = {}
             for key in keys:
-                role = key.split(":")[-1]
+                # bytes → str 디코딩
+                key_str = key.decode() if isinstance(key, bytes) else key
+                role = key_str.split(":")[-1]
                 data = await client.get(key)
                 if data:
-                    result[role] = json.loads(data)
+                    # bytes → str 디코딩 후 JSON 파싱
+                    data_str = data.decode() if isinstance(data, bytes) else data
+                    result[role] = json.loads(data_str)
             return result
         else:
             # 메모리 모드
