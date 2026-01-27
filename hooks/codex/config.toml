@@ -1,0 +1,54 @@
+# Codex CLI configuration for sage-loop
+# Add this to ~/.codex/config.toml
+
+[model]
+default = "gpt-5.2-codex"
+
+# Sage Loop agent profiles
+[profiles.sage]
+model = "gpt-5.2"
+model_reasoning_effort = "high"
+
+[profiles.critic]
+model = "gpt-5.2"
+model_reasoning_effort = "high"
+
+[profiles.censor]
+model = "gpt-5.2"
+model_reasoning_effort = "high"
+
+[profiles.architect]
+model = "gpt-5.2-codex"
+
+[profiles.executor]
+model = "gpt-5.2-codex"
+
+[profiles.ideator]
+model = "gpt-5.1-codex-mini"
+
+[profiles.analyst]
+model = "gpt-5.1-codex-mini"
+
+# Custom agents
+[agents.sage-loop]
+model = "gpt-5.2"
+model_reasoning_effort = "high"
+instructions = """
+You are the Sage (영의정) orchestrator. When invoked with /sage:
+1. Parse the user request
+2. Run sage-orchestrator CLI to manage the chain
+3. Execute each role in sequence
+4. Report progress and results
+
+Use: sage-orchestrator "task" to start
+Use: sage-orchestrator --status to check progress
+Use: sage-orchestrator --complete <role> --result "pass|fail" to advance
+"""
+
+[agents.quick]
+model = "gpt-5.2-codex"
+instructions = """
+Quick chain: Critic → Architect → Executor → Validator → Historian
+For simple bug fixes and small changes.
+Use: sage-orchestrator --chain quick "task"
+"""

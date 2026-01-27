@@ -47,15 +47,38 @@ fi
 echo -e "${YELLOW}► ${PLATFORM} 오버레이 적용 중...${NC}"
 python3 scripts/apply_overlay.py "$PLATFORM" -q
 
-# Claude Code 전용: hooks 복사
+# 플랫폼별 hooks 설치
 if [ "$PLATFORM" = "claude" ]; then
     HOOKS_DIR="$HOME/.claude/hooks"
     mkdir -p "$HOOKS_DIR"
 
-    echo -e "${YELLOW}► Hooks 설치 중...${NC}"
+    echo -e "${YELLOW}► Claude Hooks 설치 중...${NC}"
     cp hooks/*.py "$HOOKS_DIR/" 2>/dev/null || true
     cp hooks/*.sh "$HOOKS_DIR/" 2>/dev/null || true
     chmod +x "$HOOKS_DIR"/*.sh 2>/dev/null || true
+elif [ "$PLATFORM" = "codex" ]; then
+    CODEX_DIR="$HOME/.codex"
+    mkdir -p "$CODEX_DIR"
+
+    echo -e "${YELLOW}► Codex 설정 중...${NC}"
+    # config.toml 병합
+    if [ -f "$CODEX_DIR/config.toml" ]; then
+        if ! grep -q "agents.sage-loop" "$CODEX_DIR/config.toml" 2>/dev/null; then
+            echo "" >> "$CODEX_DIR/config.toml"
+            cat hooks/codex/config.toml >> "$CODEX_DIR/config.toml"
+        fi
+    else
+        cp hooks/codex/config.toml "$CODEX_DIR/config.toml"
+    fi
+    # instructions.md 병합
+    if [ -f "$CODEX_DIR/instructions.md" ]; then
+        if ! grep -q "Sage Loop" "$CODEX_DIR/instructions.md" 2>/dev/null; then
+            echo "" >> "$CODEX_DIR/instructions.md"
+            cat hooks/codex/instructions.md >> "$CODEX_DIR/instructions.md"
+        fi
+    else
+        cp hooks/codex/instructions.md "$CODEX_DIR/instructions.md"
+    fi
 fi
 
 echo
