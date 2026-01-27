@@ -345,10 +345,33 @@ def parse_chain_roles(roles_config: list) -> list[PhaseItem]:
 
 
 def select_chain(task: str, config: dict) -> str:
-    """작업에 맞는 체인 선택"""
+    """작업에 맞는 체인 선택
+
+    우선순위:
+    1. 명시적 체인 이름 (풀체인, FULL, QUICK, REVIEW, DESIGN)
+    2. 키워드 매칭
+    3. 기본값 (FULL)
+    """
     task_lower = task.lower()
     chains = config.get("chains", {})
 
+    # 1. 명시적 체인 이름 체크 (최우선)
+    explicit_mappings = {
+        "풀체인": "FULL", "full chain": "FULL", "전체": "FULL",
+        "퀵체인": "QUICK", "quick chain": "QUICK",
+        "리뷰체인": "REVIEW", "review chain": "REVIEW",
+        "디자인체인": "DESIGN", "design chain": "DESIGN",
+    }
+    for pattern, chain_name in explicit_mappings.items():
+        if pattern in task_lower and chain_name in chains:
+            return chain_name
+
+    # 대문자 체인명 직접 매칭
+    for chain_name in chains.keys():
+        if chain_name.lower() in task_lower:
+            return chain_name
+
+    # 2. 키워드 매칭
     for name, cfg in chains.items():
         triggers = cfg.get("triggers", {})
         keywords = [k.lower() for k in triggers.get("keywords", [])]

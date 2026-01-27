@@ -30,7 +30,7 @@ chains:
       - historian                                     # Phase 14: 사관 기록
 
     triggers:
-      keywords: [새로운, 개발, 구현, 기능, 추가, 만들어, new, feature]
+      keywords: [풀체인, full chain, 전체, FULL, 새로운, 개발, 구현, 기능, 추가, 만들어, new, feature]
       complexity: [중간, 복잡]
 
     branches:
