@@ -184,7 +184,7 @@ result = await commander.execute_chain(
 ```text
 sage-loop/
 ├── skills/           # Role definitions (platform-agnostic)
-│   ├── sage/         # Orchestrator skill
+│   ├── yeong-ui-jeong/  # Orchestrator skill (영의정)
 │   ├── ideator.md
 │   ├── critic.md
 │   └── ...
