@@ -25,6 +25,7 @@ class Phase02Ideator(PhaseHook):
 
     phase_number = 2
     role_name = "ideator"
+    enforcement_message = "이건 답변이 아니라 회피다."
 
     allowed_actions = [
         "generate_ideas",       # 아이디어 생성

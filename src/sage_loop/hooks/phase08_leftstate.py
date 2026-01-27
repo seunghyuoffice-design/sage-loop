@@ -23,6 +23,7 @@ class Phase08LeftState(PhaseHook):
 
     phase_number = 8
     role_name = "left-state-councilor"
+    enforcement_message = "내정은 흐림 없이 명확해야 한다."
 
     allowed_actions = [
         "review_personnel",     # 이조: 인사/역할 검토

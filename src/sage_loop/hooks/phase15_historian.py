@@ -24,6 +24,7 @@ class Phase15Historian(PhaseHook):
 
     phase_number = 15
     role_name = "historian"
+    enforcement_message = "기록에 빠진 건 없는가? 누락은 곧 왜곡이다."
 
     allowed_actions = [
         "record",               # 기록

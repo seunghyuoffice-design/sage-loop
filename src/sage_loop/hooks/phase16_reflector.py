@@ -24,6 +24,7 @@ class Phase16Reflector(PhaseHook):
 
     phase_number = 16
     role_name = "reflector"
+    enforcement_message = "세션 전체를 봤다. 반복되는 병목이 보인다."
 
     allowed_actions = [
         "reflect",              # 회고

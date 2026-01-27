@@ -23,6 +23,7 @@ class Phase09RightState(PhaseHook):
 
     phase_number = 9
     role_name = "right-state-councilor"
+    enforcement_message = "실무 검토에서 빠진 건 없는가?"
 
     allowed_actions = [
         "review_military",      # 병조: 실행/배포 검토

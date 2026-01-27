@@ -22,6 +22,7 @@ class Phase04Critic(PhaseHook):
 
     phase_number = 4
     role_name = "critic"
+    enforcement_message = "위험·논리·비용·결함, 하나라도 빠지면 탄핵이다."
 
     allowed_actions = [
         "find_risks",           # 위험 찾기

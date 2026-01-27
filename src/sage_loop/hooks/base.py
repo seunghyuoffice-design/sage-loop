@@ -35,12 +35,14 @@ class PhaseHook(ABC):
     - role_name: 역할 이름
     - allowed_actions: 허용된 행동 목록
     - forbidden_actions: 금지된 행동 목록
+    - enforcement_message: 대충 마무리 방지용 독설
     """
 
     phase_number: int
     role_name: str
     allowed_actions: list[str]
     forbidden_actions: list[str]
+    enforcement_message: str = ""  # 대충 마무리 방지용 독설
 
     @abstractmethod
     def validate_input(self, session_state: dict) -> PhaseResult:

@@ -22,6 +22,7 @@ class Phase07Architect(PhaseHook):
 
     phase_number = 7
     role_name = "architect"
+    enforcement_message = "구조 설계가 Critic 위험을 해소하지 못하면 재설계다."
 
     allowed_actions = [
         "design",               # 설계

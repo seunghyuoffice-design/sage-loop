@@ -29,6 +29,7 @@ class Phase14SageFinal(PhaseHook):
 
     phase_number = 14
     role_name = "sage"
+    enforcement_message = "최종 결재에서 빠진 건 없는가?"
 
     allowed_actions = [
         "final_approve",        # 최종 승인

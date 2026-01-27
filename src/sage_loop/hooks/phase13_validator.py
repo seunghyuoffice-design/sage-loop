@@ -24,6 +24,7 @@ class Phase13Validator(PhaseHook):
 
     phase_number = 13
     role_name = "validator"
+    enforcement_message = "대충 끝낸 흔적이 그대로 남아 있다."
 
     allowed_actions = [
         "validate",             # 검증

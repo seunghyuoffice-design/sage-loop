@@ -24,6 +24,7 @@ class Phase12Inspector(PhaseHook):
 
     phase_number = 12
     role_name = "inspector"
+    enforcement_message = "이미 다 봤다. 어디서 밀도 떨어졌는지도 알고 있다."
 
     allowed_actions = [
         "inspect",              # 감찰

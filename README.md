@@ -248,6 +248,51 @@ SAGE_SESSION_TIMEOUT=3600
 SAGE_DEBUG=0
 ```
 
+## Auto-Approval Settings
+
+Sage Loop runs multiple commands during chain execution. To prevent approval prompts from interrupting the flow, configure auto-approval for each platform.
+
+### Claude Code (~/.claude/settings.json)
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3:*)",
+      "Bash(pip:*)",
+      "Bash(git:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(mv:*)",
+      "Bash(docker:*)",
+      "Bash(.venv/bin/*:*)"
+    ],
+    "defaultMode": "acceptEdits"
+  }
+}
+```
+
+### OpenAI Codex (~/.codex/config.toml)
+
+```toml
+model = "gpt-5.2-codex"
+approval_policy = "on-failure"
+sandbox_mode = "workspace-write"
+
+[projects."/your/project/path"]
+trust_level = "trusted"
+```
+
+**approval_policy options:**
+- `untrusted`: Only safe read commands auto-run (default)
+- `on-failure`: Auto-run in sandbox, prompt on failure (recommended)
+- `on-request`: Model decides when to ask
+- `never`: Never prompt (risky)
+
+Reference: [Codex Config Reference](https://developers.openai.com/codex/config-reference/)
+
 ## Historical Inspiration
 
 The system draws from Korea's Joseon Dynasty (1392-1897) governance:

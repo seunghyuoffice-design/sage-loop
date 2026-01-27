@@ -22,6 +22,7 @@ class Phase01SageIntake(PhaseHook):
 
     phase_number = 1
     role_name = "sage"
+    enforcement_message = "접수 내용이 불명확하면 진행 불가다."
 
     allowed_actions = [
         "classify_petition",    # 안건 분류

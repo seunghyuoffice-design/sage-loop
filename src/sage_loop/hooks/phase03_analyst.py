@@ -22,6 +22,7 @@ class Phase03Analyst(PhaseHook):
 
     phase_number = 3
     role_name = "analyst"
+    enforcement_message = "대충 넘어간 지점이 명확하다."
 
     allowed_actions = [
         "rank_ideas",           # 순위 나열

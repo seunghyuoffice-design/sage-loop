@@ -22,6 +22,7 @@ class Phase06Academy(PhaseHook):
 
     phase_number = 6
     role_name = "academy"
+    enforcement_message = "근거 없는 해석은 학술 자문이 아니다."
 
     allowed_actions = [
         "provide_reference",    # 참고 자료 제공

@@ -28,6 +28,7 @@ class Phase10SageApproval(PhaseHook):
 
     phase_number = 10
     role_name = "sage"
+    enforcement_message = "승인 기준이 불명확하면 반려다."
 
     allowed_actions = [
         "approve",              # 승인
