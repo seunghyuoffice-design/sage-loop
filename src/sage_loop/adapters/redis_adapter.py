@@ -33,6 +33,26 @@ except ImportError:
     Redis = None
 
 
+def _serialize_for_redis(data: dict[str, Any]) -> dict[str, Any]:
+    """Redis HSET용 데이터 직렬화.
+
+    None, list, dict, bool, datetime을 Redis 호환 타입으로 변환.
+    """
+    processed = {}
+    for k, v in data.items():
+        if v is None:
+            processed[k] = ""  # None → 빈 문자열
+        elif isinstance(v, datetime):
+            processed[k] = v.isoformat()
+        elif isinstance(v, (dict, list)):
+            processed[k] = json.dumps(v)
+        elif isinstance(v, bool):
+            processed[k] = str(v).lower()  # bool → "true"/"false"
+        else:
+            processed[k] = v
+    return processed
+
+
 class InMemoryStore:
     """메모리 기반 저장소 (Redis fallback)"""
 
@@ -118,21 +138,7 @@ class RedisAdapter:
 
     async def save_session(self, session_id: str, data: dict[str, Any]) -> None:
         """세션 저장"""
-        # datetime/dict/None을 Redis 호환 타입으로 변환
-        processed = {}
-        for k, v in data.items():
-            if v is None:
-                processed[k] = ""  # None → 빈 문자열
-            elif isinstance(v, datetime):
-                processed[k] = v.isoformat()
-            elif isinstance(v, dict):
-                processed[k] = json.dumps(v)
-            elif isinstance(v, list):
-                processed[k] = json.dumps(v)  # list도 JSON으로
-            elif isinstance(v, bool):
-                processed[k] = str(v).lower()  # bool → "true"/"false"
-            else:
-                processed[k] = v
+        processed = _serialize_for_redis(data)
 
         client = await self._get_client()
         if client:
@@ -185,21 +191,7 @@ class RedisAdapter:
 
     async def update_session(self, session_id: str, updates: dict[str, Any]) -> None:
         """세션 업데이트"""
-        # datetime/dict/None을 Redis 호환 타입으로 변환
-        processed = {}
-        for k, v in updates.items():
-            if v is None:
-                processed[k] = ""  # None → 빈 문자열
-            elif isinstance(v, datetime):
-                processed[k] = v.isoformat()
-            elif isinstance(v, dict):
-                processed[k] = json.dumps(v)
-            elif isinstance(v, list):
-                processed[k] = json.dumps(v)  # list도 JSON으로
-            elif isinstance(v, bool):
-                processed[k] = str(v).lower()  # bool → "true"/"false"
-            else:
-                processed[k] = v
+        processed = _serialize_for_redis(updates)
 
         client = await self._get_client()
         if client:
@@ -239,13 +231,7 @@ class RedisAdapter:
 
     async def save_chain_state(self, session_id: str, data: dict[str, Any]) -> None:
         """체인 상태 저장"""
-        # 리스트/딕셔너리를 JSON으로 변환
-        processed = {}
-        for k, v in data.items():
-            if isinstance(v, (list, dict)):
-                processed[k] = json.dumps(v)
-            else:
-                processed[k] = v
+        processed = _serialize_for_redis(data)
 
         client = await self._get_client()
         if client:
@@ -282,12 +268,7 @@ class RedisAdapter:
 
     async def update_chain_state(self, session_id: str, updates: dict[str, Any]) -> None:
         """체인 상태 업데이트"""
-        processed = {}
-        for k, v in updates.items():
-            if isinstance(v, (list, dict)):
-                processed[k] = json.dumps(v)
-            else:
-                processed[k] = v
+        processed = _serialize_for_redis(updates)
 
         client = await self._get_client()
         if client:
