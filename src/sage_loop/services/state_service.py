@@ -75,17 +75,22 @@ class SessionState:
     @classmethod
     def from_dict(cls, data: dict) -> "SessionState":
         """딕셔너리에서 생성"""
-        # analysis가 딕셔너리면 TaskAnalysis로 변환
+        import json as _json
+
+        # analysis 처리 (문자열이면 JSON 파싱)
         analysis = data.get("analysis", {})
+        if isinstance(analysis, str):
+            try:
+                analysis = _json.loads(analysis)
+            except _json.JSONDecodeError:
+                analysis = {}
         if isinstance(analysis, dict):
             analysis = TaskAnalysis(**analysis)
 
-        # completed_roles 처리
+        # completed_roles 처리 (문자열이면 JSON 파싱)
         completed_roles = data.get("completed_roles", [])
         if isinstance(completed_roles, str):
-            import json
-
-            completed_roles = json.loads(completed_roles)
+            completed_roles = _json.loads(completed_roles)
 
         return cls(
             id=data["id"],
