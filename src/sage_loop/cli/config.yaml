@@ -68,6 +68,10 @@ chains:
       complexity: [단순, 중간]
       risk: [낮음, 보통]
     branches: []
+    exit_conditions:
+      - role: validator
+        keywords: ["FAIL", "fail", "실패", "검증실패", "테스트실패"]
+        reason: "Validator 검증 실패"
 
   REVIEW:
     roles: [critic, validator]
@@ -76,6 +80,10 @@ chains:
       complexity: [단순]
       risk: [낮음]
     branches: []
+    exit_conditions:
+      - role: validator
+        keywords: ["FAIL", "fail", "실패", "검증실패", "테스트실패"]
+        reason: "Validator 검증 실패"
 
   DESIGN:
     roles: [ideator, analyst, critic, architect]
