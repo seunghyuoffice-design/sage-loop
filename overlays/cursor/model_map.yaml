@@ -1,0 +1,26 @@
+# Cursor IDE overlay for sage-loop
+# Apply: python3 scripts/apply_overlay.py cursor
+
+platform: cursor
+rules_path: .cursor/rules/
+
+# Model assignments (Cursor uses its own model routing)
+# Cursor rules don't specify models - they use project settings
+models:
+  # All roles use default Cursor model
+  # Rules focus on behavior, not model selection
+  sage: { description: "Chief State Councilor - accepts/authorizes/approves" }
+  critic: { description: "Risk identifier - finds issues without solutions" }
+  censor: { description: "Rule enforcer - blocks violations" }
+  academy: { description: "Academic advisor - provides guidance" }
+  historian: { description: "Record keeper - documents decisions" }
+  left-state-councilor: { description: "Policy reviewer - internal affairs" }
+  right-state-councilor: { description: "Technical reviewer - external affairs" }
+  architect: { description: "System designer - creates blueprints" }
+  executor: { description: "Implementer - executes designs exactly" }
+  inspector: { description: "Code inspector - checks implementation" }
+  validator: { description: "Quality gate - pass/fail decisions" }
+  analyst: { description: "Idea filter - selects top 5 ideas" }
+  ideator: { description: "Idea generator - creates 50+ ideas" }
+  improver: { description: "Enhancement proposer - suggests improvements" }
+  reflector: { description: "Session reviewer - analyzes patterns" }

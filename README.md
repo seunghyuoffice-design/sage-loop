@@ -58,9 +58,14 @@ Sage(접수) → Ideator → Analyst → Critic → Censor → Academy → Archi
 curl -fsSL https://raw.githubusercontent.com/seunghyuoffice-design/sage-loop/main/install.sh | bash
 ```
 
-Codex 사용자:
+다른 플랫폼:
+
 ```bash
-curl -fsSL https://raw.githubusercontent.com/seunghyuoffice-design/sage-loop/main/install.sh | bash -s codex
+curl ... | bash -s codex        # OpenAI Codex
+curl ... | bash -s antigravity  # Google Antigravity
+curl ... | bash -s opencode     # OpenCode
+curl ... | bash -s cursor       # Cursor IDE
+curl ... | bash -s vscode       # VS Code Copilot
 ```
 
 ### Git Clone 설치

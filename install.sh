@@ -1,6 +1,7 @@
 #!/bin/bash
 # sage-loop 원클릭 설치 스크립트
 # Usage: curl -fsSL https://raw.githubusercontent.com/seunghyuoffice-design/sage-loop/main/install.sh | bash
+# Platforms: claude, codex, antigravity, opencode, cursor, vscode
 
 set -e
 
@@ -20,6 +21,10 @@ detect_platform() {
         echo "claude"
     elif [ -d "$HOME/.codex" ] || command -v codex &> /dev/null; then
         echo "codex"
+    elif [ -d "$HOME/.gemini/antigravity" ]; then
+        echo "antigravity"
+    elif [ -d "$HOME/.config/opencode" ] || command -v opencode &> /dev/null; then
+        echo "opencode"
     else
         echo "claude"  # 기본값
     fi
@@ -47,39 +52,56 @@ fi
 echo -e "${YELLOW}► ${PLATFORM} 오버레이 적용 중...${NC}"
 python3 scripts/apply_overlay.py "$PLATFORM" -q
 
-# 플랫폼별 hooks 설치
-if [ "$PLATFORM" = "claude" ]; then
-    HOOKS_DIR="$HOME/.claude/hooks"
-    mkdir -p "$HOOKS_DIR"
-
-    echo -e "${YELLOW}► Claude Hooks 설치 중...${NC}"
-    cp hooks/*.py "$HOOKS_DIR/" 2>/dev/null || true
-    cp hooks/*.sh "$HOOKS_DIR/" 2>/dev/null || true
-    chmod +x "$HOOKS_DIR"/*.sh 2>/dev/null || true
-elif [ "$PLATFORM" = "codex" ]; then
-    CODEX_DIR="$HOME/.codex"
-    mkdir -p "$CODEX_DIR"
-
-    echo -e "${YELLOW}► Codex 설정 중...${NC}"
-    # config.toml 병합
-    if [ -f "$CODEX_DIR/config.toml" ]; then
-        if ! grep -q "agents.sage-loop" "$CODEX_DIR/config.toml" 2>/dev/null; then
-            echo "" >> "$CODEX_DIR/config.toml"
-            cat hooks/codex/config.toml >> "$CODEX_DIR/config.toml"
+# 플랫폼별 hooks/설정 설치
+case "$PLATFORM" in
+    claude)
+        HOOKS_DIR="$HOME/.claude/hooks"
+        mkdir -p "$HOOKS_DIR"
+        echo -e "${YELLOW}► Claude Hooks 설치 중...${NC}"
+        cp hooks/*.py "$HOOKS_DIR/" 2>/dev/null || true
+        cp hooks/*.sh "$HOOKS_DIR/" 2>/dev/null || true
+        chmod +x "$HOOKS_DIR"/*.sh 2>/dev/null || true
+        ;;
+    codex)
+        CODEX_DIR="$HOME/.codex"
+        mkdir -p "$CODEX_DIR"
+        echo -e "${YELLOW}► Codex 설정 중...${NC}"
+        if [ -f "$CODEX_DIR/config.toml" ]; then
+            if ! grep -q "agents.sage-loop" "$CODEX_DIR/config.toml" 2>/dev/null; then
+                echo "" >> "$CODEX_DIR/config.toml"
+                cat hooks/codex/config.toml >> "$CODEX_DIR/config.toml"
+            fi
+        else
+            cp hooks/codex/config.toml "$CODEX_DIR/config.toml"
         fi
-    else
-        cp hooks/codex/config.toml "$CODEX_DIR/config.toml"
-    fi
-    # instructions.md 병합
-    if [ -f "$CODEX_DIR/instructions.md" ]; then
-        if ! grep -q "Sage Loop" "$CODEX_DIR/instructions.md" 2>/dev/null; then
-            echo "" >> "$CODEX_DIR/instructions.md"
-            cat hooks/codex/instructions.md >> "$CODEX_DIR/instructions.md"
+        if [ -f "$CODEX_DIR/instructions.md" ]; then
+            if ! grep -q "Sage Loop" "$CODEX_DIR/instructions.md" 2>/dev/null; then
+                echo "" >> "$CODEX_DIR/instructions.md"
+                cat hooks/codex/instructions.md >> "$CODEX_DIR/instructions.md"
+            fi
+        else
+            cp hooks/codex/instructions.md "$CODEX_DIR/instructions.md"
         fi
-    else
-        cp hooks/codex/instructions.md "$CODEX_DIR/instructions.md"
-    fi
-fi
+        ;;
+    antigravity)
+        echo -e "${YELLOW}► Antigravity 스킬 설치 완료${NC}"
+        # Skills already installed by apply_overlay.py
+        ;;
+    opencode)
+        OPENCODE_DIR="$HOME/.config/opencode"
+        mkdir -p "$OPENCODE_DIR"
+        echo -e "${YELLOW}► OpenCode 에이전트 설치 완료${NC}"
+        # Agents already installed by apply_overlay.py
+        ;;
+    cursor)
+        echo -e "${YELLOW}► Cursor 룰 생성 완료${NC}"
+        echo -e "  ${BLUE}프로젝트 루트에 .cursor/rules/ 확인${NC}"
+        ;;
+    vscode)
+        echo -e "${YELLOW}► VS Code 설정 생성 완료${NC}"
+        echo -e "  ${BLUE}프로젝트 루트에 .github/instructions/ 확인${NC}"
+        ;;
+esac
 
 echo
 echo -e "${GREEN}╔════════════════════════════════════════╗${NC}"
@@ -87,11 +109,22 @@ echo -e "${GREEN}║          ✓ 설치 완료!                  ║${NC}"
 echo -e "${GREEN}╚════════════════════════════════════════╝${NC}"
 echo
 echo -e "사용법:"
-if [ "$PLATFORM" = "claude" ]; then
-    echo -e "  ${BLUE}/sage \"작업 내용\"${NC}           # Sage Loop 시작"
-    echo -e "  ${BLUE}/sage --chain quick \"버그 수정\"${NC}  # Quick 체인"
-else
-    echo -e "  ${BLUE}sage-orchestrator \"작업 내용\"${NC}"
-fi
+case "$PLATFORM" in
+    claude)
+        echo -e "  ${BLUE}/sage \"작업 내용\"${NC}              # Sage Loop 시작"
+        echo -e "  ${BLUE}/sage --chain quick \"버그 수정\"${NC}  # Quick 체인"
+        ;;
+    codex|opencode)
+        echo -e "  ${BLUE}sage-orchestrator \"작업 내용\"${NC}"
+        echo -e "  ${BLUE}sage-orchestrator --status${NC}"
+        ;;
+    antigravity)
+        echo -e "  ${BLUE}/sage \"작업 내용\"${NC}              # Antigravity에서 실행"
+        ;;
+    cursor|vscode)
+        echo -e "  ${BLUE}@sage-<role> 참조하여 역할 실행${NC}"
+        echo -e "  ${BLUE}sage-orchestrator CLI 사용${NC}"
+        ;;
+esac
 echo
 echo -e "문서: https://github.com/seunghyuoffice-design/sage-loop"

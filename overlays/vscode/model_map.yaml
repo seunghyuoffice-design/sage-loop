@@ -1,0 +1,25 @@
+# VS Code GitHub Copilot overlay for sage-loop
+# Apply: python3 scripts/apply_overlay.py vscode
+
+platform: vscode
+instructions_path: .github/instructions/
+prompts_path: .github/prompts/
+
+# Model assignments (Copilot uses its own model routing)
+# Instructions focus on behavior, not model selection
+models:
+  sage: { applyTo: "**/*", description: "Chief State Councilor" }
+  critic: { applyTo: "**/*", description: "Risk identifier" }
+  censor: { applyTo: "**/*", description: "Rule enforcer" }
+  academy: { applyTo: "**/*", description: "Academic advisor" }
+  historian: { applyTo: "**/*", description: "Record keeper" }
+  left-state-councilor: { applyTo: "**/*", description: "Policy reviewer" }
+  right-state-councilor: { applyTo: "**/*", description: "Technical reviewer" }
+  architect: { applyTo: "**/*", description: "System designer" }
+  executor: { applyTo: "**/*", description: "Implementer" }
+  inspector: { applyTo: "**/*", description: "Code inspector" }
+  validator: { applyTo: "**/*", description: "Quality gate" }
+  analyst: { applyTo: "**/*", description: "Idea filter" }
+  ideator: { applyTo: "**/*", description: "Idea generator" }
+  improver: { applyTo: "**/*", description: "Enhancement proposer" }
+  reflector: { applyTo: "**/*", description: "Session reviewer" }

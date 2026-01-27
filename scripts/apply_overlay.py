@@ -164,7 +164,6 @@ def apply_codex_overlay(config: dict, verbose: bool = True):
     profiles = []
 
     for skill_name, settings in config.get("models", {}).items():
-        # Find source skill (directory version preferred)
         src_file = find_skill_source(skill_name)
         if not src_file:
             if verbose:
@@ -174,19 +173,14 @@ def apply_codex_overlay(config: dict, verbose: bool = True):
         content = src_file.read_text()
         fm, body = parse_frontmatter(content)
 
-        # Remove Claude-specific fields
         fm.pop("model", None)
         fm.pop("alias", None)
-
-        # Add metadata for cross-platform
         fm["metadata"] = {"sage-loop-skill": skill_name}
 
-        # Write to Codex skills directory
         dst_dir = skills_path / skill_name
         dst_dir.mkdir(parents=True, exist_ok=True)
         (dst_dir / "SKILL.md").write_text(write_frontmatter(fm, body))
 
-        # Build profile entry
         profile = f'[profiles.{skill_name}]\nmodel = "{settings.get("model", "gpt-5.2-codex")}"'
         if "reasoning_effort" in settings:
             profile += f'\nmodel_reasoning_effort = "{settings["reasoning_effort"]}"'
@@ -196,13 +190,189 @@ def apply_codex_overlay(config: dict, verbose: bool = True):
             reasoning = f" + reasoning:{settings['reasoning_effort']}" if settings.get("reasoning_effort") else ""
             print(f"  [OK] {skill_name} → {settings.get('model', '?')}{reasoning}")
 
-    # Write profiles.toml
     profiles_content = "# sage-loop Codex profiles\n# Add to ~/.codex/config.toml\n\n" + "\n\n".join(profiles)
     (skills_path / "profiles.toml").write_text(profiles_content)
 
     if verbose:
         print(f"\nSkills installed to: {skills_path}")
         print(f"Profiles saved to: {skills_path / 'profiles.toml'}")
+
+
+def apply_antigravity_overlay(config: dict, verbose: bool = True):
+    """Apply Antigravity overlay to skills (same format as Claude)."""
+    skills_path = Path(config.get("skills_path", "~/.gemini/antigravity/skills/")).expanduser()
+    skills_path.mkdir(parents=True, exist_ok=True)
+
+    for skill_name, settings in config.get("models", {}).items():
+        src_file = find_skill_source(skill_name)
+        if not src_file:
+            if verbose:
+                print(f"  [SKIP] {skill_name}: source not found")
+            continue
+
+        content = src_file.read_text()
+        fm, body = parse_frontmatter(content)
+
+        if "model" in settings:
+            fm["model"] = settings["model"]
+
+        if settings.get("thinking") == "extended":
+            if "extended thinking" not in body.lower():
+                body = body.lstrip("-").lstrip("\n")
+                body = "\n\n# Extended Thinking Mode\n" + body
+
+        dst_dir = skills_path / skill_name
+        dst_dir.mkdir(parents=True, exist_ok=True)
+        (dst_dir / "SKILL.md").write_text(write_frontmatter(fm, body))
+
+        # Copy additional files
+        src_dir = src_file.parent
+        for item in src_dir.iterdir():
+            if item.name in ("SKILL.md", "__pycache__") or item.name.endswith(".md"):
+                continue
+            if item.is_dir():
+                import shutil
+                dst = dst_dir / item.name
+                if dst.exists():
+                    shutil.rmtree(dst)
+                shutil.copytree(item, dst, ignore=shutil.ignore_patterns("__pycache__"))
+
+        if verbose:
+            thinking = " + extended" if settings.get("thinking") else ""
+            print(f"  [OK] {skill_name} → {settings.get('model', '?')}{thinking}")
+
+    if verbose:
+        print(f"\nSkills installed to: {skills_path}")
+
+
+def apply_opencode_overlay(config: dict, verbose: bool = True):
+    """Apply OpenCode overlay - generates agent markdown files with JSON frontmatter."""
+    import json
+    agents_path = Path(config.get("agents_path", "~/.config/opencode/agents/")).expanduser()
+    agents_path.mkdir(parents=True, exist_ok=True)
+
+    for skill_name, settings in config.get("models", {}).items():
+        src_file = find_skill_source(skill_name)
+        if not src_file:
+            if verbose:
+                print(f"  [SKIP] {skill_name}: source not found")
+            continue
+
+        content = src_file.read_text()
+        _, body = parse_frontmatter(content)
+
+        # OpenCode uses JSON frontmatter
+        agent_config = {
+            "description": f"Sage Loop {skill_name} role",
+            "model": settings.get("model", "anthropic/claude-sonnet"),
+            "temperature": float(settings.get("temperature", 0.3)),
+            "tools": {"bash": True, "edit": True, "read": True}
+        }
+
+        # Write agent file with JSON frontmatter
+        agent_content = f"---\n{json.dumps(agent_config, indent=2)}\n---\n{body}"
+        (agents_path / f"{skill_name}.md").write_text(agent_content)
+
+        if verbose:
+            print(f"  [OK] {skill_name} → {settings.get('model', '?')}")
+
+    if verbose:
+        print(f"\nAgents installed to: {agents_path}")
+
+
+def apply_cursor_overlay(config: dict, verbose: bool = True):
+    """Apply Cursor overlay - generates .mdc rule files."""
+    rules_path = Path(config.get("rules_path", ".cursor/rules/")).expanduser()
+    rules_path.mkdir(parents=True, exist_ok=True)
+
+    for skill_name, settings in config.get("models", {}).items():
+        src_file = find_skill_source(skill_name)
+        if not src_file:
+            if verbose:
+                print(f"  [SKIP] {skill_name}: source not found")
+            continue
+
+        content = src_file.read_text()
+        _, body = parse_frontmatter(content)
+
+        # Cursor .mdc format with YAML frontmatter
+        description = settings.get("description", f"Sage Loop {skill_name} role")
+        rule_content = f"""---
+description: "{description}"
+globs: ["**/*"]
+alwaysApply: false
+---
+
+# {skill_name.replace('-', ' ').title()} Role
+
+{body}
+"""
+        (rules_path / f"sage-{skill_name}.mdc").write_text(rule_content)
+
+        if verbose:
+            print(f"  [OK] {skill_name} → sage-{skill_name}.mdc")
+
+    if verbose:
+        print(f"\nRules installed to: {rules_path}")
+
+
+def apply_vscode_overlay(config: dict, verbose: bool = True):
+    """Apply VS Code Copilot overlay - generates .instructions.md files."""
+    instructions_path = Path(config.get("instructions_path", ".github/instructions/")).expanduser()
+    prompts_path = Path(config.get("prompts_path", ".github/prompts/")).expanduser()
+    instructions_path.mkdir(parents=True, exist_ok=True)
+    prompts_path.mkdir(parents=True, exist_ok=True)
+
+    for skill_name, settings in config.get("models", {}).items():
+        src_file = find_skill_source(skill_name)
+        if not src_file:
+            if verbose:
+                print(f"  [SKIP] {skill_name}: source not found")
+            continue
+
+        content = src_file.read_text()
+        _, body = parse_frontmatter(content)
+
+        # VS Code .instructions.md format
+        apply_to = settings.get("applyTo", "**/*")
+        instruction_content = f"""---
+applyTo: "{apply_to}"
+---
+
+# {skill_name.replace('-', ' ').title()} Role (Sage Loop)
+
+{body}
+"""
+        (instructions_path / f"sage-{skill_name}.instructions.md").write_text(instruction_content)
+
+        if verbose:
+            print(f"  [OK] {skill_name} → sage-{skill_name}.instructions.md")
+
+    # Create main sage prompt file
+    prompt_content = """---
+description: "Start Sage Loop orchestration chain"
+---
+
+# Sage Loop Orchestrator
+
+When invoked, run the sage-loop chain:
+
+1. Start with: `sage-orchestrator "{{input:task}}"`
+2. Execute each role as directed by the CLI
+3. Complete roles with: `sage-orchestrator --complete <role> --result "pass"`
+4. Continue until CHAIN_COMPLETE
+
+Available chains:
+- FULL: All 14 phases (complex tasks)
+- QUICK: Critic → Architect → Executor → Validator → Historian
+- REVIEW: Critic → Validator
+- DESIGN: Ideator → Analyst → Critic → Architect
+"""
+    (prompts_path / "sage.prompt.md").write_text(prompt_content)
+
+    if verbose:
+        print(f"\nInstructions installed to: {instructions_path}")
+        print(f"Prompts installed to: {prompts_path}")
 
 
 def list_overlays():
@@ -213,9 +383,19 @@ def list_overlays():
             print(f"  - {overlay_dir.name}")
 
 
+PLATFORM_HANDLERS = {
+    "claude": apply_claude_overlay,
+    "codex": apply_codex_overlay,
+    "antigravity": apply_antigravity_overlay,
+    "opencode": apply_opencode_overlay,
+    "cursor": apply_cursor_overlay,
+    "vscode": apply_vscode_overlay,
+}
+
+
 def main():
     parser = argparse.ArgumentParser(description="Apply platform overlay to sage-loop skills")
-    parser.add_argument("platform", nargs="?", help="Platform: claude, codex")
+    parser.add_argument("platform", nargs="?", help="Platform: claude, codex, antigravity, opencode, cursor, vscode")
     parser.add_argument("--list", action="store_true", help="List available overlays")
     parser.add_argument("-q", "--quiet", action="store_true", help="Quiet mode")
 
@@ -235,10 +415,9 @@ def main():
     if verbose:
         print(f"Applying {args.platform} overlay...")
 
-    if args.platform == "claude":
-        apply_claude_overlay(config, verbose)
-    elif args.platform == "codex":
-        apply_codex_overlay(config, verbose)
+    handler = PLATFORM_HANDLERS.get(args.platform)
+    if handler:
+        handler(config, verbose)
     else:
         print(f"Unknown platform: {args.platform}")
         print("Use --list to see available overlays")

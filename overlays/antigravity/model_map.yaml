@@ -1,0 +1,28 @@
+# Google Antigravity overlay for sage-loop
+# Apply: python3 scripts/apply_overlay.py antigravity
+
+platform: antigravity
+skills_path: ~/.gemini/antigravity/skills/
+
+# Model assignments (Gemini models)
+models:
+  # Supervision/Judgment (gemini-2.5-pro + extended thinking)
+  sage: { model: gemini-2.5-pro, thinking: extended }
+  critic: { model: gemini-2.5-pro, thinking: extended }
+  censor: { model: gemini-2.5-pro, thinking: extended }
+  academy: { model: gemini-2.5-pro, thinking: extended }
+  historian: { model: gemini-2.5-pro, thinking: extended }
+  left-state-councilor: { model: gemini-2.5-pro, thinking: extended }
+  right-state-councilor: { model: gemini-2.5-pro, thinking: extended }
+
+  # Implementation (gemini-2.5-flash)
+  architect: { model: gemini-2.5-flash }
+  executor: { model: gemini-2.5-flash }
+  inspector: { model: gemini-2.5-flash }
+  validator: { model: gemini-2.5-flash }
+
+  # Generation (gemini-2.5-flash-lite)
+  analyst: { model: gemini-2.5-flash-lite }
+  ideator: { model: gemini-2.5-flash-lite }
+  improver: { model: gemini-2.5-flash-lite }
+  reflector: { model: gemini-2.5-flash-lite }
