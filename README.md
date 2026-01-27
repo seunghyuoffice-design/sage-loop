@@ -52,18 +52,37 @@ Sage(접수) → Ideator → Analyst → Critic → Censor → Academy → Archi
 
 ## Installation
 
-### Quick Start (Platform-Specific)
+### 원클릭 설치 (One-liner)
 
 ```bash
-# Clone the repo
+curl -fsSL https://raw.githubusercontent.com/seunghyuoffice-design/sage-loop/main/install.sh | bash
+```
+
+Codex 사용자:
+```bash
+curl -fsSL https://raw.githubusercontent.com/seunghyuoffice-design/sage-loop/main/install.sh | bash -s codex
+```
+
+### Git Clone 설치
+
+```bash
+git clone https://github.com/seunghyuoffice-design/sage-loop.git
+cd sage-loop
+make install        # Claude Code (기본)
+# make install-codex  # OpenAI Codex
+```
+
+### 수동 설치
+
+```bash
 git clone https://github.com/seunghyuoffice-design/sage-loop.git
 cd sage-loop
 
-# Apply overlay for your platform
+# 오버레이 적용
 python3 scripts/apply_overlay.py claude   # For Claude Code
 python3 scripts/apply_overlay.py codex    # For OpenAI Codex
 
-# Copy hooks (Claude Code only)
+# Hooks 복사 (Claude Code only)
 cp hooks/* ~/.claude/hooks/
 chmod +x ~/.claude/hooks/*.sh
 ```
