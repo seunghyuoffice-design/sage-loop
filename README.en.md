@@ -6,6 +6,8 @@
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Compatible-blueviolet.svg)](https://claude.ai/claude-code)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-lightgrey.svg)]()
 
+English | **[한국어](README.md)**
+
 **14-phase autonomous agent orchestration system** — Inspired by Korea's Joseon Dynasty governance (1392-1897)
 
 > *"What if your AI agent worked like a 500-year-old government bureaucracy?"*

@@ -6,6 +6,8 @@
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Compatible-blueviolet.svg)](https://claude.ai/claude-code)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-lightgrey.svg)]()
 
+**[English](README.en.md)** | 한국어
+
 **14-phase 자율 에이전트 오케스트레이션 시스템** - 조선시대 의정부 심의 체계에서 영감
 
 ```
