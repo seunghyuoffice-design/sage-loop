@@ -5,6 +5,22 @@ All notable changes to Sage Loop will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-01-28
+
+### Removed
+- **Major cleanup**: Removed 32 unused modules (~3000 lines)
+  - engine/ (8 modules: branch_handler, chain_executor, compact_checkpoint, context_compactor, parallel_task_runner, role_runner, sage_commander, task_dispatcher)
+  - hooks/ (17 modules: phase01-14 hooks + base, session_state)
+  - services/ (3 modules: state_service, supervisor, __init__)
+  - adapters/ (2 modules: redis_adapter, __init__)
+  - feedback/ (2 modules: feedback_manager, __init__)
+  - Root modules: state_manager.py, role_dispatcher.py, ministry_registry.py, schemas.py
+
+### Changed
+- Minimal core: Only cli/, config.py, session.py remain
+- orchestrator.py is self-contained (816 lines, no external sage_loop dependencies)
+- Simplified __init__.py: removed all exports
+
 ## [1.3.3] - 2026-01-28
 
 ### Removed
