@@ -15,18 +15,16 @@ chains:
       - [seungji-ijo, seungji-hojo, seungji-yejo,
          seungji-byeongjo, seungji-hyeongjo, seungji-gongjo]  # Phase 4: 6조 승지 병렬
       - doseungji                                     # Phase 5: 도승지 (6승지 취합)
-      - sagawon                                       # Phase 6: 사간원 (간쟁/비판)
-      - saheonbu                                      # Phase 7: 사헌부 (RULES 봉쇄)
-      - hongmungwan                                   # Phase 8: 홍문관 (학술 자문)
-      - dohwaseo                                      # Phase 9: 도화서 (설계 수립)
-      - [jwauijeong, uuijeong]                        # Phase 10: 좌의정+우의정 병렬
-      - sage                                          # Phase 11: 실행 허가
+      - [sagawon, saheonbu, hongmungwan]             # Phase 6: 삼사 병렬 (간쟁/감찰/자문)
+      - dohwaseo                                      # Phase 7: 도화서 (설계 수립)
+      - [jwauijeong, uuijeong]                        # Phase 8: 좌의정+우의정 병렬
+      - sage                                          # Phase 9: 실행 허가
       - [executor-ijo, executor-hojo, executor-yejo,
-         executor-byeongjo, executor-hyeongjo, executor-gongjo]  # Phase 12: 6조 집행관 병렬
-      - doseungji                                     # Phase 13: 도승지 (실행 결과 취합)
-      - [amhaeng, gyoseogwan]                         # Phase 14: 암행어사+교서관 병렬
-      - sage                                          # Phase 15: 최종 결재
-      - [chunchugwan, seungmunwon, gyujanggak]       # Phase 16: 춘추관+승문원+규장각 병렬
+         executor-byeongjo, executor-hyeongjo, executor-gongjo]  # Phase 10: 6조 집행관 병렬
+      - doseungji                                     # Phase 11: 도승지 (실행 결과 취합)
+      - [amhaeng, gyoseogwan]                         # Phase 12: 암행어사+교서관 병렬
+      - sage                                          # Phase 13: 최종 결재
+      - [chunchugwan, seungmunwon, gyujanggak]       # Phase 14: 춘추관+승문원+규장각 병렬
 
     triggers:
       keywords: [새로운, 개발, 구현, 기능, 추가, 만들어, new, feature]

@@ -1,6 +1,6 @@
 # Sage Loop
 
-A **16-phase autonomous agent orchestration system** with **6조 병렬 실행**, inspired by the Korean Joseon Dynasty's Uijeongbu (의정부) deliberation system.
+A **14-phase autonomous agent orchestration system** with **6조 병렬 실행**, inspired by the Korean Joseon Dynasty's Uijeongbu (의정부) deliberation system.
 
 ## Overview
 
@@ -16,17 +16,17 @@ Sage Loop implements a hierarchical decision-making chain modeled after the Jose
 The Sage (영의정) appears **three times**, following the historical Uijeongbu deliberation flow:
 
 1. **Phase 1**: Accept petition ("검토하라")
-2. **Phase 11**: Authorize execution ("시행하라")
-3. **Phase 15**: Final approval ("완료 확인")
+2. **Phase 9**: Authorize execution ("시행하라")
+3. **Phase 13**: Final approval ("완료 확인")
 
 ```text
 Sage(접수) → [6조 낭청] → [6조 판서] → [6조 승지] → 도승지
-    → 사간원 → 사헌부 → 홍문관 → 도화서
-    → [좌의정 ∥ 우의정] → Sage(허가) → [6조 집행관] → 도승지
-    → [암행어사 ∥ 교서관] → Sage(결재) → [춘추관 ∥ 승문원 ∥ 규장각]
+    → [삼사 병렬] → 도화서 → [좌의정 ∥ 우의정] → Sage(허가)
+    → [6조 집행관] → 도승지 → [암행어사 ∥ 교서관]
+    → Sage(결재) → [춘추관 ∥ 승문원 ∥ 규장각]
 ```
 
-## Roles (16 Phases)
+## Roles (14 Phases)
 
 | Phase | Role | Korean | Function | Type |
 | ----- | ---- | ------ | -------- | ---- |
@@ -34,18 +34,16 @@ Sage(접수) → [6조 낭청] → [6조 판서] → [6조 승지] → 도승지
 | 2 | ideator-* (x6) | 6조 낭청 | Generate ideas per ministry | **Parallel** |
 | 3 | analyst-* (x6) | 6조 판서 | Analyze and filter ideas | **Parallel** |
 | 4 | seungji-* (x6) | 6조 승지 | Format for deliberation | **Parallel** |
-| 5 | doseungji | 도승지 | Consolidate 6 ministry outputs | Sequential |
-| 6 | sagawon | 사간원 | Remonstrance and critique | Sequential |
-| 7 | saheonbu | 사헌부 | RULES compliance check | Sequential |
-| 8 | hongmungwan | 홍문관 | Academic consultation | Sequential |
-| 9 | dohwaseo | 도화서 | Design implementation | Sequential |
-| 10 | jwauijeong + uuijeong | 좌의정 + 우의정 | Policy + Technical review | **Parallel** |
-| 11 | **Sage** | 영의정 | **Authorize execution** - "시행하라" | Sequential |
-| 12 | executor-* (x6) | 6조 집행관 | Execute per ministry | **Parallel** |
-| 13 | doseungji | 도승지 | Consolidate execution results | Sequential |
-| 14 | amhaeng + gyoseogwan | 암행어사 + 교서관 | Inspection + Validation | **Parallel** |
-| 15 | **Sage** | 영의정 | **Final approval** - "완료 확인" | Sequential |
-| 16 | chunchugwan + seungmunwon + gyujanggak | 춘추관 + 승문원 + 규장각 | Record + Reflect + Improve | **Parallel** |
+| 5 | doseungji | 도승지 | Consolidate and distribute to 삼사 | Sequential |
+| 6 | sagawon + saheonbu + hongmungwan | 삼사 | Remonstrance + Compliance + Counsel | **Parallel** |
+| 7 | dohwaseo | 도화서 | Design implementation | Sequential |
+| 8 | jwauijeong + uuijeong | 좌의정 + 우의정 | Policy + Technical review | **Parallel** |
+| 9 | **Sage** | 영의정 | **Authorize execution** - "시행하라" | Sequential |
+| 10 | executor-* (x6) | 6조 집행관 | Execute per ministry | **Parallel** |
+| 11 | doseungji | 도승지 | Consolidate execution results | Sequential |
+| 12 | amhaeng + gyoseogwan | 암행어사 + 교서관 | Inspection + Validation | **Parallel** |
+| 13 | **Sage** | 영의정 | **Final approval** - "완료 확인" | Sequential |
+| 14 | chunchugwan + seungmunwon + gyujanggak | 춘추관 + 승문원 + 규장각 | Record + Reflect + Improve | **Parallel** |
 
 ### 6조 (Six Ministries)
 
@@ -60,7 +58,7 @@ Sage(접수) → [6조 낭청] → [6조 판서] → [6조 승지] → 도승지
 
 ## Chain Types
 
-- **FULL**: All 16 phases with 6조 parallel execution (complex tasks)
+- **FULL**: All 14 phases with 6조 + 삼사 parallel execution (complex tasks)
 - **QUICK**: 사간원 → 도화서 → Executor → [암행어사 ∥ 교서관] → 춘추관
 - **REVIEW**: [사간원 ∥ 교서관]
 - **DESIGN**: Ideator → Analyst → 사간원 → 도화서
