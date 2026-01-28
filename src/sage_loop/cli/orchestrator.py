@@ -42,7 +42,7 @@ from ..session import generate_session_id as _generate_session_id
 # =============================================================================
 
 STATE_DIR = Path(os.environ.get("SAGE_STATE_DIR", "/tmp"))
-CONFIG_PATH = Path(__file__).resolve().parent / "config_v4.yaml"
+CONFIG_PATH = Path(__file__).resolve().parent / "config.yaml"
 CURRENT_SESSION_FILE = STATE_DIR / "sage_current_session"
 
 

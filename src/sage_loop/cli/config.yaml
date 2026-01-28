@@ -1,187 +1,134 @@
-# Sage 설정
+# Sage v4 설정 - 병렬 실행 지원
+#
+# 역할 정의:
+#   - "role"              → 순차 실행
+#   - ["role1", "role2"]  → 병렬 실행 (둘 다 완료해야 다음으로)
 
-# 체인 정의 (CLAUDE.md SAGE_LOOP 기준, 17단계)
-# 영의정(Sage)이 3회 호출: 안건 접수(Phase 1) + 실행 허가(Phase 10) + 최종 결재(Phase 14)
 chains:
   FULL:
     roles:
-      - sage              # Phase 1: 안건 접수 (영의정 1차) - "검토하라"
-      - ideator           # Phase 2: 아이디어 생성
-      - analyst           # Phase 3: 분석/선별
-      - critic            # Phase 4: 위험/결함 비판
-      - censor            # Phase 5: RULES 사전 봉쇄
-      - academy           # Phase 6: 학술 자문
-      - architect         # Phase 7: 설계 수립
-      - left-state-councilor   # Phase 8: 내정 검토 (이조/호조/예조)
-      - right-state-councilor  # Phase 9: 실무 검토 (병조/형조/공조)
-      - sage              # Phase 10: 실행 허가 (영의정 2차) - "시행하라"
-      - executor          # Phase 11: 구현
-      - inspector         # Phase 12: 감찰
-      - validator         # Phase 13: 검증
-      - sage              # Phase 14: 최종 결재 (영의정 3차) - "완료 확인"
-      - historian         # Phase 15: 기록
-      - reflector         # Phase 16: 회고
-      - improver          # Phase 17: 개선
+      - sage                                          # Phase 1: 안건 접수
+      - [ideator-ijo, ideator-hojo, ideator-yejo,
+         ideator-byeongjo, ideator-hyeongjo, ideator-gongjo]  # Phase 2: 6조 낭청 병렬
+      - [analyst-ijo, analyst-hojo, analyst-yejo,
+         analyst-byeongjo, analyst-hyeongjo, analyst-gongjo]  # Phase 3: 6조 판서 병렬
+      - [seungji-ijo, seungji-hojo, seungji-yejo,
+         seungji-byeongjo, seungji-hyeongjo, seungji-gongjo]  # Phase 4: 6조 승지 병렬
+      - doseungji                                     # Phase 5: 도승지 (6승지 취합)
+      - [sagawon, saheonbu, hongmungwan]             # Phase 6: 삼사 병렬 (간쟁/감찰/자문)
+      - dohwaseo                                      # Phase 7: 도화서 (설계 수립)
+      - [jwauijeong, uuijeong]                        # Phase 8: 좌의정+우의정 병렬
+      - sage                                          # Phase 9: 실행 허가
+      - [executor-ijo, executor-hojo, executor-yejo,
+         executor-byeongjo, executor-hyeongjo, executor-gongjo]  # Phase 10: 6조 집행관 병렬
+      - doseungji                                     # Phase 11: 도승지 (실행 결과 취합)
+      - [amhaeng, gyoseogwan]                         # Phase 12: 암행어사+교서관 병렬
+      - sage                                          # Phase 13: 최종 결재
+      - [chunchugwan, seungmunwon, gyujanggak]       # Phase 14: 춘추관+승문원+규장각 병렬
+
     triggers:
-      keywords: [새로운, 개발, 구현, 기능, 추가, 만들어]
+      keywords: [새로운, 개발, 구현, 기능, 추가, 만들어, new, feature]
       complexity: [중간, 복잡]
-      risk: [보통, 높음]
+
     branches:
-      # 분기 조건: result에 해당 키워드 포함 시 분기 발생 (배열/문자열 지원)
-      - from: critic
+      - from: sagawon
         to: ideator
-        condition: ["reject", "반려", "거절", "재검토", "보완필요"]
+        condition: [reject, 반려, 거절, 재검토, 보완필요]
         max_loops: 2
+
       - from: analyst
         to: feasibility-checker
-        condition: ["uncertain", "불확실", "추가검토", "확인필요", "판단불가"]
+        condition: [uncertain, 불확실, 추가검토, 확인필요]
         max_loops: 3
-      - from: left-state-councilor
-        to: architect
-        condition: ["reject", "반려", "재설계", "수정필요"]
+
+      - from: jwauijeong
+        to: dohwaseo
+        condition: [reject, 반려, 재설계]
         max_loops: 2
-      - from: right-state-councilor
-        to: architect
-        condition: ["reject", "반려", "재설계", "수정필요"]
+
+      - from: uuijeong
+        to: dohwaseo
+        condition: [reject, 반려, 재설계]
         max_loops: 2
-      - from: inspector
+
+      - from: amhaeng
         to: executor
-        condition: ["reject", "반려", "재구현", "수정필요", "결함발견"]
+        condition: [reject, 반려, 결함발견]
         max_loops: 2
-      - from: validator
+
+      - from: gyoseogwan
         to: executor
-        condition: ["reject", "반려", "테스트실패", "검증실패", "fail"]
+        condition: [reject, fail, 테스트실패]
         max_loops: 2
-    # 즉시 종료 조건 (EXIT 분기)
+
     exit_conditions:
-      - role: censor
-        keywords: ["차단", "block", "불가", "금지"]
+      - role: saheonbu
+        keywords: [차단, block, 불가, 금지]
         reason: "RULES 위반으로 즉시 종료"
+
       - role: sage
-        keywords: ["거부", "reject", "불가", "기각", "반려"]
+        keywords: [거부, reject, 불가, 기각]
         reason: "Sage 거부로 종료"
 
   QUICK:
-    roles: [critic, architect, executor, validator, historian]
+    roles:
+      - sagawon                    # 사간원
+      - dohwaseo                   # 도화서
+      - executor
+      - [amhaeng, gyoseogwan]      # 암행어사+교서관 병렬
+      - chunchugwan                # 춘추관
+
     triggers:
-      keywords: [버그, 수정, 고침, 패치, 에러, 오류]
+      keywords: [버그, 수정, 고침, 패치, 에러, 오류, fix, bug, hotfix]
       complexity: [단순, 중간]
-      risk: [낮음, 보통]
+
     branches: []
-    exit_conditions:
-      - role: validator
-        keywords: ["FAIL", "fail", "실패", "검증실패", "테스트실패"]
-        reason: "Validator 검증 실패"
+    exit_conditions: []
 
   REVIEW:
-    roles: [critic, validator]
+    roles:
+      - [sagawon, gyoseogwan]      # 사간원+교서관 병렬
+
     triggers:
-      keywords: [검토, 리뷰, 확인, 체크, 점검]
+      keywords: [검토, 리뷰, 확인, 체크, 점검, review, check]
       complexity: [단순]
-      risk: [낮음]
+
     branches: []
-    exit_conditions:
-      - role: validator
-        keywords: ["FAIL", "fail", "실패", "검증실패", "테스트실패"]
-        reason: "Validator 검증 실패"
+    exit_conditions: []
 
   DESIGN:
-    roles: [ideator, analyst, critic, architect]
+    roles:
+      - ideator
+      - analyst
+      - sagawon                    # 사간원
+      - dohwaseo                   # 도화서
+
     triggers:
-      keywords: [설계, 아키텍처, 구조, 계획, 방향]
+      keywords: [설계, 아키텍처, 구조, 계획, design, architecture]
       complexity: [중간, 복잡]
-      risk: [보통]
+
     branches:
       - from: analyst
         to: feasibility-checker
-        condition: "feasibility_uncertain"
+        condition: [uncertain, 불확실]
         max_loops: 3
 
-# 사용자 개입 지점
-user_intervention_points:
-  CHAIN_SELECTED:
-    trigger: "체인 결정 완료"
-    required: true
-    message: "선택된 체인으로 진행하시겠습니까?"
+    exit_conditions: []
 
-  BRANCH_DECISION:
-    trigger: "분기 발생"
-    required: true
-    message: "분기가 필요합니다. 진행하시겠습니까?"
+  RESEARCH:
+    roles:
+      - [ideator, hongmungwan]     # 낭청+홍문관 병렬
+      - analyst
+      - sagawon                    # 사간원
 
-  CRITICAL_RISK:
-    trigger: "Critic 위험도 HIGH"
-    required: true
-    message: "높은 위험이 감지되었습니다. 진행하시겠습니까?"
+    triggers:
+      keywords: [조사, 연구, 탐색, research, explore, investigate]
+      complexity: [단순, 중간]
 
-  BEFORE_EXECUTE:
-    trigger: "Executor 직전"
-    required: false  # 설정 가능
-    message: "구현을 시작합니다. 확인하시겠습니까?"
+    branches: []
+    exit_conditions: []
 
-# 기본 설정
 defaults:
   fallback_chain: FULL
-  auto_confirm: false
   max_total_branches: 5
   timeout_minutes: 60
-
-# 실행 모드 설정 (3가지 모드)
-execution_modes:
-  full-auto:
-    description: "완전 자동 실행"
-    user_approval_points: []
-    auto_branch: true
-    error_handling: "auto_recover"
-    recommended_for:
-      keywords: [긴급, 빨리, 수정, 버그, 패치, hotfix]
-
-  plan-first:
-    description: "계획 승인 후 실행"
-    user_approval_points: ["plan"]
-    auto_branch: true
-    error_handling: "interactive"
-    recommended_for:
-      keywords: [신규, 기능, 개발, 구현, 추가, new, feature]
-
-  interactive:
-    description: "각 단계마다 승인 요청"
-    user_approval_points: ["every_role"]
-    auto_branch: false
-    error_handling: "user_choice"
-    recommended_for:
-      keywords: [복잡, 불확실, 리스크, 위험, 마이그레이션]
-      complexity: [복잡]
-      risk: [높음]
-
-default_mode: "plan-first"
-
-# 복잡도 판단 기준
-complexity_criteria:
-  단순:
-    - 단일 파일 변경
-    - 명확한 문제
-    - 의존성 없음
-  중간:
-    - 2-5개 파일 변경
-    - 일부 의존성
-    - 테스트 필요
-  복잡:
-    - 6개 이상 파일 변경
-    - 다중 의존성
-    - 아키텍처 영향
-
-# 위험도 판단 기준
-risk_criteria:
-  낮음:
-    - 국소적 변경
-    - 롤백 용이
-    - 데이터 영향 없음
-  보통:
-    - 중간 범위 변경
-    - 일부 영향
-    - 테스트 필수
-  높음:
-    - 광범위 변경
-    - 데이터 영향
-    - 서비스 중단 가능
