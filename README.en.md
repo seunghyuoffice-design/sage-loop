@@ -10,7 +10,7 @@ English | **[한국어](README.md)**
 
 **14-phase autonomous agent orchestration system** — Inspired by Korea's Joseon Dynasty governance (1392-1897)
 
-> *"What if your AI agent worked like a 500-year-old government bureaucracy?"*
+> *"Checks and balances — even for AI"*
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
