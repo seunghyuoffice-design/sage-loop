@@ -1,6 +1,6 @@
 # Sage Loop
 
-[![Version](https://img.shields.io/badge/version-5.0.0-blue.svg)](https://github.com/seunghyuoffice-design/sage-loop/releases)
+[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://github.com/seunghyuoffice-design/sage-loop/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-yellow.svg)](https://python.org)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Compatible-blueviolet.svg)](https://claude.ai/claude-code)
@@ -14,7 +14,7 @@ English | **[한국어](README.md)**
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              SAGE LOOP v5                                   │
+│                              SAGE LOOP v1.3                                   │
 │                                                                             │
 │   "Review it"           "Execute it"          "Confirm completion"          │
 │       ↓                     ↓                       ↓                       │
