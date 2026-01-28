@@ -60,26 +60,42 @@ curl -fsSL https://raw.githubusercontent.com/seunghyuoffice-design/sage-loop/mai
 ## The 14-Phase Flow
 
 ```
-Phase 1            Phase 2-4 (6 Ministries)           Phase 5        Phase 6 (3 Offices)
-┌──────────┐     ┌─────────────────────────────┐     ┌──────────┐   ┌─────────────────┐
-│  SAGE    │     │ ┌──────┐┌──────┐┌──────┐   │     │ Chief    │   │┌─────┐┌─────┐┌─────┐│
-│"Review it"│───→│ │Ideator││Ideator││Ideator│×6│───→│ Secretary│──→││Censor││Insp.││Acad.││
-│          │     │ └──────┘└──────┘└──────┘   │     └──────────┘   │└─────┘└─────┘└─────┘│
-└──────────┘     │    ↓       ↓       ↓       │                    └─────────────────┘
-                 │ ┌──────┐┌──────┐┌──────┐   │                            │
-                 │ │Analyst││Analyst││Analyst│ │                            ▼
-                 │ └──────┘└──────┘└──────┘   │     ┌───────────────────────────────────┐
-                 │    ↓       ↓       ↓       │     │  Phase 7-9: Design → Review → Approve │
-                 │ ┌──────┐┌──────┐┌──────┐   │     │  Architect → Left/Right → SAGE "Execute"│
-                 │ │Format││Format││Format│   │     └───────────────────────────────────┘
-                 └─────────────────────────────┘                       │
-                                                                       ▼
-Phase 10-11 (6 Executors)        Phase 12 (Inspect)        Phase 13       Phase 14 (Post)
-┌───────────────────────┐     ┌────────────────────┐     ┌──────────┐   ┌────────────────────┐
-│ ┌────────┐            │     │ ┌────────┐┌──────┐ │     │  SAGE    │   │┌──────┐┌──────┐┌──────┐│
-│ │Executor│ ×6 → Merge │────→│ │Secret  ││Quality││────→│"Confirm" │──→││Logger││Review││Improve││
-│ └────────┘            │     │ │Insp.   ││Checker││     └──────────┘   │└──────┘└──────┘└──────┘│
-└───────────────────────┘     └────────────────────┘                    └────────────────────────┘
+SAGE #1 "Review it"
+    │
+    ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Phase 2-4: 6 Ministries (Ideator → Analyst → Formatter) x6     │
+│  Personnel | Finance | Rites | Military | Justice | Works       │
+└─────────────────────────────────────────────────────────────────┘
+    │
+    ▼
+Phase 5: Chief Secretary merges all
+    │
+    ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Phase 6: Three Offices parallel review                         │
+│  Censor (criticism) | Inspector (rules) | Scholars (academia)   │
+└─────────────────────────────────────────────────────────────────┘
+    │
+    ▼
+Phase 7: Architect designs  →  Phase 8: Left/Right Councilors review
+    │
+    ▼
+SAGE #2 "Execute it"
+    │
+    ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Phase 10-11: 6 Executors (parallel) → Chief Secretary merges   │
+└─────────────────────────────────────────────────────────────────┘
+    │
+    ▼
+Phase 12: Secret Inspector + Quality Checker
+    │
+    ▼
+SAGE #3 "Confirm completion"
+    │
+    ▼
+Phase 14: Logger | Reviewer | Improver (record/reflect/enhance)
 ```
 
 ---
