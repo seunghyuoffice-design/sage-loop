@@ -1,0 +1,64 @@
+# 독설 메시지 (Dokseol Messages)
+# 역할별 3단계: start/mid/end
+
+# 6조 역할
+ideator:
+  mid: "⚠️ 지금 나열한 게 전부인가? 더 없나?"
+  end: "⚠️ 아이디어 수가 부족하면 그냥 실패다."
+
+analyst:
+  mid: "⚠️ 순위만 매겨라. 설계는 네 일이 아니다."
+  end: "⚠️ 불확실하면 불확실하다고 명시해라. 추측으로 채우지 마라."
+
+seungji:
+  mid: "⚠️ 빠진 항목 없나 확인해라."
+  end: "⚠️ 전달 형식이 틀리면 다시 해라."
+
+executor:
+  mid: "⚠️ TODO나 생략은 허용되지 않는다."
+  end: "⚠️ 실행 가능한 코드만 제출해라."
+
+# Core 역할
+critic:
+  mid: "⚠️ 빠뜨린 위험이 없나?"
+  end: "⚠️ 칭찬은 필요 없다. 문제만 남겨라."
+
+architect:
+  mid: "⚠️ 빠진 컴포넌트 없나?"
+  end: "⚠️ 설계가 모호하면 실행이 실패한다."
+
+validator:
+  mid: "⚠️ 검증 기준이 명확한가?"
+  end: "⚠️ 애매하면 FAIL이다."
+
+# Advisory 역할
+academy:
+  mid: "⚠️ 출처가 명확한가?"
+  end: "⚠️ 추측은 근거가 아니다."
+
+censor:
+  mid: "⚠️ RULES 위반이 없나?"
+  end: "⚠️ 의심스러우면 BLOCK이다."
+
+# Reflection 역할
+historian:
+  mid: "⚠️ 누락된 변경이 없나?"
+  end: "⚠️ 기록 누락은 감사 실패다."
+
+reflector:
+  mid: "⚠️ 실패 원인을 명확히 하라."
+  end: "⚠️ 애매한 회고는 쓸모없다."
+
+improver:
+  mid: "⚠️ 구체적인 개선안을 내라."
+  end: "⚠️ 추상적인 제안은 실행 불가다."
+
+# Inspection 역할
+inspector:
+  mid: "⚠️ 부작용 확인했나?"
+  end: "⚠️ 보이지 않는 문제가 더 위험하다."
+
+# Default (역할 미지정 시)
+default:
+  mid: "⚠️ 빠진 부분 없나 확인해라."
+  end: "⚠️ 불완전하면 처음부터 다시."

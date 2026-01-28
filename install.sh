@@ -58,8 +58,8 @@ case "$PLATFORM" in
         HOOKS_DIR="$HOME/.claude/hooks"
         mkdir -p "$HOOKS_DIR"
         echo -e "${YELLOW}► Claude Hooks 설치 중...${NC}"
-        cp hooks/*.py "$HOOKS_DIR/" 2>/dev/null || true
-        cp hooks/*.sh "$HOOKS_DIR/" 2>/dev/null || true
+        cp overlays/claude/hooks/*.py "$HOOKS_DIR/" 2>/dev/null || true
+        cp overlays/claude/hooks/*.sh "$HOOKS_DIR/" 2>/dev/null || true
         chmod +x "$HOOKS_DIR"/*.sh 2>/dev/null || true
         ;;
     codex)
@@ -69,18 +69,18 @@ case "$PLATFORM" in
         if [ -f "$CODEX_DIR/config.toml" ]; then
             if ! grep -q "agents.sage-loop" "$CODEX_DIR/config.toml" 2>/dev/null; then
                 echo "" >> "$CODEX_DIR/config.toml"
-                cat hooks/codex/config.toml >> "$CODEX_DIR/config.toml"
+                cat overlays/codex/config.toml >> "$CODEX_DIR/config.toml"
             fi
         else
-            cp hooks/codex/config.toml "$CODEX_DIR/config.toml"
+            cp overlays/codex/config.toml "$CODEX_DIR/config.toml"
         fi
         if [ -f "$CODEX_DIR/instructions.md" ]; then
             if ! grep -q "Sage Loop" "$CODEX_DIR/instructions.md" 2>/dev/null; then
                 echo "" >> "$CODEX_DIR/instructions.md"
-                cat hooks/codex/instructions.md >> "$CODEX_DIR/instructions.md"
+                cat overlays/codex/instructions.md >> "$CODEX_DIR/instructions.md"
             fi
         else
-            cp hooks/codex/instructions.md "$CODEX_DIR/instructions.md"
+            cp overlays/codex/instructions.md "$CODEX_DIR/instructions.md"
         fi
         ;;
     antigravity)

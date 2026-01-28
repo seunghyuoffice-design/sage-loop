@@ -1,0 +1,12 @@
+#!/bin/bash
+# post-push hook - pyproject.toml 버전 변경 시 자동 릴리즈
+
+set -euo pipefail
+
+# pyproject.toml이 변경되었는지 확인
+if git diff --name-only HEAD@{1} HEAD | grep -q "^pyproject.toml$"; then
+    echo "pyproject.toml 변경 감지 - 자동 릴리즈 실행..."
+
+    SCRIPT_DIR="$(dirname "$(realpath "$0")")/../.."
+    python3 "$SCRIPT_DIR/scripts/auto_release.py"
+fi

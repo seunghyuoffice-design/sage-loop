@@ -1,9 +1,8 @@
 # Sage Loop
 
-[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://github.com/seunghyuoffice-design/sage-loop/releases)
+[![Version](https://img.shields.io/badge/version-1.4.0-blue.svg)](https://github.com/seunghyuoffice-design/sage-loop/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-yellow.svg)](https://python.org)
-[![Claude Code](https://img.shields.io/badge/Claude%20Code-Compatible-blueviolet.svg)](https://claude.ai/claude-code)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-lightgrey.svg)]()
 
 **[English](README.en.md)** | 한국어
@@ -14,7 +13,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              SAGE LOOP v1.3                                   │
+│                              SAGE LOOP v1.4                                   │
 │                                                                             │
 │   "검토하라"          "시행하라"           "완료 확인"                        │
 │       ↓                   ↓                    ↓                            │
@@ -302,8 +301,16 @@ curl -fsSL https://raw.githubusercontent.com/seunghyuoffice-design/sage-loop/mai
 ```bash
 git clone https://github.com/seunghyuoffice-design/sage-loop.git
 cd sage-loop
-make install        # Claude Code (기본)
-# make install-codex  # OpenAI Codex
+
+# 플랫폼별 설치
+pip install -e .
+sage-loop-setup --platform claude        # Claude Code
+sage-loop-setup --platform codex         # OpenAI Codex
+sage-loop-setup --platform antigravity   # Antigravity
+
+# 독설(Dokseol) 포함 설치
+sage-loop-setup --platform claude --with-dokseol
+sage-loop-setup --platform codex --with-dokseol
 ```
 
 ---
@@ -426,12 +433,42 @@ sage-loop/
 |---------|-------------|
 | 6조 병렬 실행 | 6개 부처가 동시에 처리 (Phase 2-4, 10) |
 | 삼사 병렬 검토 | 사간원+사헌부+홍문관 동시 검토 (Phase 6) |
-| 독설 (Dokseol) | 역할별 품질 강제 메시지 |
+| 독설 (Dokseol) | 역할별 품질 강제 메시지 (선택 설치) |
 | 3회 Sage 등장 | 의정부 체계 재현 (접수/허가/결재) |
 | 6 Platform | Claude, Codex, Antigravity, Cursor, OpenCode, VSCode |
 | 오버레이 시스템 | 플랫폼별 모델/설정 분리 |
 | Thread-safe | fcntl.flock + atomic writes |
 | 순환 방지 | Circuit breaker 내장 |
+
+---
+
+## 독설 (Dokseol)
+
+**독설**은 역할 수행 중 품질을 강제하는 경고 메시지 시스템입니다.
+
+### 설치 방법
+
+```bash
+# Claude Code (동적 주입 - hook 사용)
+sage-loop-setup --platform claude --with-dokseol
+
+# Codex/Antigravity (정적 주입 - SKILL.md에 포함)
+sage-loop-setup --platform codex --with-dokseol
+sage-loop-setup --platform antigravity --with-dokseol
+```
+
+### 독설 예시
+
+| 역할 | 중간 독설 | 종료 독설 |
+|------|-----------|-----------|
+| **Analyst** | "순위만 매겨라. 설계는 네 일이 아니다." | "불확실하면 불확실하다고 명시해라. 추측으로 채우지 마라." |
+| **Executor** | "TODO나 생략은 허용되지 않는다." | "실행 가능한 코드만 제출해라." |
+| **Critic** | "빠뜨린 위험이 없나?" | "칭찬은 필요 없다. 문제만 남겨라." |
+
+### 작동 방식
+
+- **Claude Code**: Hook으로 동적 주입 (작업 진행에 따라 실시간 출력)
+- **Codex/Antigravity**: SKILL.md에 정적 포함 (항상 표시)
 
 ---
 

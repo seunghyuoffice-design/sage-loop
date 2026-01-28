@@ -20,6 +20,7 @@ except ImportError:
 ROOT = Path(__file__).parent.parent
 SKILLS_DIR = ROOT / "skills"
 OVERLAYS_DIR = ROOT / "overlays"
+DOKSEOL_MESSAGES_FILE = OVERLAYS_DIR / "claude" / "hooks" / "optional" / "dokseol_messages.yaml"
 
 
 def parse_frontmatter(content: str) -> tuple[dict, str]:
@@ -50,6 +51,52 @@ def write_frontmatter(fm: dict, body: str) -> str:
             lines.append(f"{key}: {value}")
     lines.append("---")
     return "\n".join(lines) + body
+
+
+def load_dokseol_messages() -> dict:
+    """Load dokseol messages from YAML."""
+    if not DOKSEOL_MESSAGES_FILE.exists():
+        return {}
+
+    if HAS_YAML:
+        with open(DOKSEOL_MESSAGES_FILE) as f:
+            return yaml.safe_load(f)
+    else:
+        # Simple parser fallback
+        messages = {}
+        content = DOKSEOL_MESSAGES_FILE.read_text()
+        current_role = None
+        for line in content.split("\n"):
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if ":" in line and not line.startswith(" "):
+                role = line.rstrip(":")
+                messages[role] = {}
+                current_role = role
+            elif current_role and ":" in line:
+                key, val = line.split(":", 1)
+                messages[current_role][key.strip()] = val.strip().strip('"')
+        return messages
+
+
+def inject_dokseol(body: str, role_name: str, dokseol_messages: dict) -> str:
+    """Inject dokseol messages into skill body."""
+    # Extract base role name (e.g., "analyst-finance" -> "analyst")
+    base_role = role_name.split("-")[0]
+
+    messages = dokseol_messages.get(base_role) or dokseol_messages.get("default", {})
+    if not messages:
+        return body
+
+    # Inject at the end of body
+    dokseol_section = "\n\n## 독설 (Dokseol)\n\n"
+    if "mid" in messages:
+        dokseol_section += f"**중간**: {messages['mid']}\n\n"
+    if "end" in messages:
+        dokseol_section += f"**종료**: {messages['end']}\n"
+
+    return body + dokseol_section
 
 
 def load_overlay(platform: str) -> dict:
@@ -105,10 +152,12 @@ def find_skill_source(skill_name: str) -> Path | None:
     return None
 
 
-def apply_claude_overlay(config: dict, verbose: bool = True):
+def apply_claude_overlay(config: dict, verbose: bool = True, with_dokseol: bool = False):
     """Apply Claude overlay to skills."""
     skills_path = Path(config.get("skills_path", "~/.claude/skills/")).expanduser()
     skills_path.mkdir(parents=True, exist_ok=True)
+
+    dokseol_messages = load_dokseol_messages() if with_dokseol else {}
 
     for skill_name, settings in config.get("models", {}).items():
         # Find source skill (directory version preferred)
@@ -120,6 +169,10 @@ def apply_claude_overlay(config: dict, verbose: bool = True):
 
         content = src_file.read_text()
         fm, body = parse_frontmatter(content)
+
+        # Inject dokseol if requested
+        if with_dokseol and dokseol_messages:
+            body = inject_dokseol(body, skill_name, dokseol_messages)
 
         # Apply model
         if "model" in settings:
@@ -156,11 +209,12 @@ def apply_claude_overlay(config: dict, verbose: bool = True):
         print(f"\nSkills installed to: {skills_path}")
 
 
-def apply_codex_overlay(config: dict, verbose: bool = True):
+def apply_codex_overlay(config: dict, verbose: bool = True, with_dokseol: bool = False):
     """Apply Codex overlay to skills."""
     skills_path = Path(config.get("skills_path", "~/.codex/skills/")).expanduser()
     skills_path.mkdir(parents=True, exist_ok=True)
 
+    dokseol_messages = load_dokseol_messages() if with_dokseol else {}
     profiles = []
 
     for skill_name, settings in config.get("models", {}).items():
@@ -172,6 +226,10 @@ def apply_codex_overlay(config: dict, verbose: bool = True):
 
         content = src_file.read_text()
         fm, body = parse_frontmatter(content)
+
+        # Inject dokseol if requested (static for Codex)
+        if with_dokseol and dokseol_messages:
+            body = inject_dokseol(body, skill_name, dokseol_messages)
 
         fm.pop("model", None)
         fm.pop("alias", None)
@@ -198,10 +256,12 @@ def apply_codex_overlay(config: dict, verbose: bool = True):
         print(f"Profiles saved to: {skills_path / 'profiles.toml'}")
 
 
-def apply_antigravity_overlay(config: dict, verbose: bool = True):
+def apply_antigravity_overlay(config: dict, verbose: bool = True, with_dokseol: bool = False):
     """Apply Antigravity overlay to skills (same format as Claude)."""
     skills_path = Path(config.get("skills_path", "~/.gemini/antigravity/skills/")).expanduser()
     skills_path.mkdir(parents=True, exist_ok=True)
+
+    dokseol_messages = load_dokseol_messages() if with_dokseol else {}
 
     for skill_name, settings in config.get("models", {}).items():
         src_file = find_skill_source(skill_name)
@@ -212,6 +272,10 @@ def apply_antigravity_overlay(config: dict, verbose: bool = True):
 
         content = src_file.read_text()
         fm, body = parse_frontmatter(content)
+
+        # Inject dokseol if requested (static for Antigravity)
+        if with_dokseol and dokseol_messages:
+            body = inject_dokseol(body, skill_name, dokseol_messages)
 
         if "model" in settings:
             fm["model"] = settings["model"]
@@ -397,6 +461,7 @@ def main():
     parser = argparse.ArgumentParser(description="Apply platform overlay to sage-loop skills")
     parser.add_argument("platform", nargs="?", help="Platform: claude, codex, antigravity, opencode, cursor, vscode")
     parser.add_argument("--list", action="store_true", help="List available overlays")
+    parser.add_argument("--with-dokseol", action="store_true", help="Include dokseol (독설) messages")
     parser.add_argument("-q", "--quiet", action="store_true", help="Quiet mode")
 
     args = parser.parse_args()
@@ -413,11 +478,16 @@ def main():
     verbose = not args.quiet
 
     if verbose:
-        print(f"Applying {args.platform} overlay...")
+        mode = " (with dokseol)" if args.with_dokseol else ""
+        print(f"Applying {args.platform} overlay{mode}...")
 
     handler = PLATFORM_HANDLERS.get(args.platform)
     if handler:
-        handler(config, verbose)
+        # Pass with_dokseol to handlers that support it
+        if args.platform in ("claude", "codex", "antigravity"):
+            handler(config, verbose, args.with_dokseol)
+        else:
+            handler(config, verbose)
     else:
         print(f"Unknown platform: {args.platform}")
         print("Use --list to see available overlays")
