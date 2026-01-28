@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sage-loop"
-version = "1.4.0"
+version = "1.4.1"
 description = "14-phase autonomous agent orchestration system for Claude Code and Google Antigravity"
 readme = "README.md"
 license = "MIT"
@@ -28,6 +28,8 @@ artifacts = ["*.yaml"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "skills" = "sage_loop/skills"
+"overlays" = "sage_loop/overlays"
+"scripts" = "sage_loop/scripts"
 
 [tool.hatch.build.targets.sdist]
-include = ["src/sage_loop", "skills"]
+include = ["src/sage_loop", "skills", "overlays", "scripts"]

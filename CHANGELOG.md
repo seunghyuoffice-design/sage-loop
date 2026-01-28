@@ -5,6 +5,16 @@ All notable changes to Sage Loop will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-01-28
+
+### Fixed
+- **Package completeness**: Added `overlays/` and `scripts/` to package distribution (pyproject.toml)
+  - Previously only `skills/` was included, causing runtime errors
+- **Git hooks cleanup**: Removed `install_git_hooks()` call from user setup
+  - Git hooks are developer-only, not needed for pip-installed users
+- **Antigravity path**: Fixed incorrect path in `check_installation()`
+  - Changed from `.gemini/antigravity/global_skills` to `.gemini/antigravity/skills`
+
 ## [1.4.0] - 2026-01-28
 
 ### Added

@@ -36,7 +36,7 @@ def check_installation(platform: str) -> dict[str, bool]:
             "config": (codex_home / "config.toml").exists(),
         }
     elif platform == "antigravity":
-        antigravity_home = Path.home() / ".gemini" / "antigravity" / "global_skills"
+        antigravity_home = Path.home() / ".gemini" / "antigravity" / "skills"
         return {
             "skills": antigravity_home.exists() and len(list(antigravity_home.glob("*"))) > 0,
         }
@@ -75,9 +75,6 @@ def install_git_hooks(package_root: Path, quiet: bool = False) -> bool:
 def install_claude(package_root: Path, quiet: bool = False, with_dokseol: bool = False) -> bool:
     """Install for Claude Code: skills and hooks to ~/.claude/"""
     claude_home = Path.home() / ".claude"
-
-    # 0. Git hooks (공통)
-    install_git_hooks(package_root, quiet)
 
     # 1. Skills
     source_skills = package_root / "skills"
