@@ -379,22 +379,11 @@ EXIT_SIGNAL: APPROVED
 
 ## Model Mapping
 
-```
-┌──────────────────────────────────────────────────────────────────────────┐
-│                          Model Configuration                             │
-├────────────────────┬─────────────────────┬───────────────────────────────┤
-│ Role Type          │ Claude Code         │ OpenAI Codex                  │
-├────────────────────┼─────────────────────┼───────────────────────────────┤
-│ Supervision        │ opus + ultrathink   │ gpt-5.2 + reasoning:high      │
-│ (sage, 삼사)       │                     │                               │
-├────────────────────┼─────────────────────┼───────────────────────────────┤
-│ Implementation     │ sonnet              │ gpt-5.2-codex                 │
-│ (executor, 도화서) │                     │                               │
-├────────────────────┼─────────────────────┼───────────────────────────────┤
-│ Generation         │ haiku               │ gpt-5.1-codex-mini            │
-│ (낭청, 판서, 승지) │                     │                               │
-└────────────────────┴─────────────────────┴───────────────────────────────┘
-```
+| Role Type | Claude | Antigravity | Codex |
+|-----------|--------|-------------|-------|
+| Supervision (sage, 삼사) | opus + ultrathink | gemini-3-pro-high | gpt-5.2 + reasoning:high |
+| Implementation (executor) | sonnet | gemini-3-pro-low | gpt-5.2-codex |
+| Generation (낭청, 판서) | haiku | gemini-3-flash | gpt-5.1-codex-mini |
 
 ---
 

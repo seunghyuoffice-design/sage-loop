@@ -5,6 +5,19 @@ All notable changes to Sage Loop will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-01-28
+
+### Added
+- **Google Antigravity Support**: Full 14-phase native workflow
+  - Model mapping: opus→gemini-3-pro-high, sonnet→gemini-3-pro-low, haiku→gemini-3-flash
+  - Browser Subagent integration for Academy (홍문관) research phase
+  - Task Groups support for parallel execution
+- 77 skills synced to Antigravity global_skills
+
+### Fixed
+- SKILL.md frontmatter delimiter (------ → ---)
+- 8 skills now properly sync: architect, executor, inspector, validator, reflector, improver, analyst, ideator
+
 ## [1.3.0] - 2026-01-28
 
 ### Added
