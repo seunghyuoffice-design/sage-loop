@@ -27,6 +27,9 @@ class Phase17Improver(PhaseHook):
     role_name = "improver"
     enforcement_message = "개선안은 구체적이어야 한다. 추상적 제안은 기각."
 
+    # 강제 주입 메시지
+    enforcement_message = "표면만 건드린 건 개선이 아니라 회피다."
+
     allowed_actions = [
         "suggest_improvements", # 개선점 제안
         "propose_next",         # 다음 작업 제안

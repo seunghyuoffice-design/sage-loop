@@ -30,6 +30,9 @@ class Phase10SageApproval(PhaseHook):
     role_name = "sage"
     enforcement_message = "승인 기준이 불명확하면 반려다."
 
+    # 강제 주입 메시지
+    enforcement_message = "끝까지 책임질 생각 없으면 시작하지 마라."
+
     allowed_actions = [
         "approve",              # 승인
         "reject",               # 거부

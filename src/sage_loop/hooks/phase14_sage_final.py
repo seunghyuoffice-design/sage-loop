@@ -31,6 +31,9 @@ class Phase14SageFinal(PhaseHook):
     role_name = "sage"
     enforcement_message = "최종 결재에서 빠진 건 없는가?"
 
+    # 강제 주입 메시지
+    enforcement_message = "끝까지 책임질 생각 없으면 시작하지 마라."
+
     allowed_actions = [
         "final_approve",        # 최종 승인
         "final_reject",         # 최종 거부

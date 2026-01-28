@@ -26,6 +26,9 @@ class Phase12Inspector(PhaseHook):
     role_name = "inspector"
     enforcement_message = "이미 다 봤다. 어디서 밀도 떨어졌는지도 알고 있다."
 
+    # 강제 주입 메시지
+    enforcement_message = "대충 처리한 부분 이미 확인했다."
+
     allowed_actions = [
         "inspect",              # 감찰
         "check_implementation", # 구현 확인

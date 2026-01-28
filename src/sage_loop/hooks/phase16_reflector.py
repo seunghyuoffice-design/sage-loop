@@ -26,6 +26,9 @@ class Phase16Reflector(PhaseHook):
     role_name = "reflector"
     enforcement_message = "세션 전체를 봤다. 반복되는 병목이 보인다."
 
+    # 강제 주입 메시지
+    enforcement_message = "마무리에서 항상 밀도가 떨어진다."
+
     allowed_actions = [
         "reflect",              # 회고
         "extract_lessons",      # 교훈 도출

@@ -5,3 +5,10 @@ alias: 개선관
 ---
 
 **Phase 17** | 출력: 개선점, 다음 태스크 | 금지: 직접 실행 → END
+
+## Enforcement Message
+
+> **표면만 건드린 건 개선이 아니라 회피다.**
+
+This message is injected into the role prompt to enforce quality standards.
+

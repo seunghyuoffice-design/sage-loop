@@ -26,6 +26,9 @@ class Phase15Historian(PhaseHook):
     role_name = "historian"
     enforcement_message = "기록에 빠진 건 없는가? 누락은 곧 왜곡이다."
 
+    # 강제 주입 메시지
+    enforcement_message = "마무리를 흐리는 패턴이 반복되고 있다."
+
     allowed_actions = [
         "record",               # 기록
         "log_changes",          # 변경 이력 기록

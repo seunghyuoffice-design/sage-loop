@@ -5,3 +5,10 @@ alias: 역사관
 ---
 
 **Phase 15** | 출력: 기록 | 금지: 판단, 수정, 승인
+
+## Enforcement Message
+
+> **마무리를 흐리는 패턴이 반복되고 있다.**
+
+This message is injected into the role prompt to enforce quality standards.
+

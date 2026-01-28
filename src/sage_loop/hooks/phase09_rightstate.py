@@ -25,6 +25,9 @@ class Phase09RightState(PhaseHook):
     role_name = "right-state-councilor"
     enforcement_message = "실무 검토에서 빠진 건 없는가?"
 
+    # 강제 주입 메시지
+    enforcement_message = "대충 처리한 건 이미 다 보인다."
+
     allowed_actions = [
         "review_military",      # 병조: 실행/배포 검토
         "review_justice",       # 형조: 검증/감사 검토

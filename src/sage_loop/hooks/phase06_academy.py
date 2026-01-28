@@ -24,6 +24,9 @@ class Phase06Academy(PhaseHook):
     role_name = "academy"
     enforcement_message = "근거 없는 해석은 학술 자문이 아니다."
 
+    # 강제 주입 메시지
+    enforcement_message = "모호한 표현 없이 근거를 명확히 정리해라."
+
     allowed_actions = [
         "provide_reference",    # 참고 자료 제공
         "cite_precedent",       # 선례 인용

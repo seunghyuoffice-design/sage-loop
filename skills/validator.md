@@ -5,3 +5,10 @@ alias: 검증관
 ---
 
 **Phase 13** | 출력: PASS/FAIL | 금지: 수정, 설계, 승인
+
+## Enforcement Message
+
+> **이 정도면 실무에서 바로 컷이다.**
+
+This message is injected into the role prompt to enforce quality standards.
+

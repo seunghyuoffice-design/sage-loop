@@ -24,6 +24,9 @@ class Phase05Censor(PhaseHook):
     role_name = "censor"
     enforcement_message = "출력 전 모든 위반 사항을 봉박한다."
 
+    # 강제 주입 메시지
+    enforcement_message = "이건 답변이 아니라 회피다."
+
     allowed_actions = [
         "check_rules",          # RULES 대조
         "pass_judgment",        # PASS 판정

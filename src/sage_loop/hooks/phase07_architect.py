@@ -24,6 +24,9 @@ class Phase07Architect(PhaseHook):
     role_name = "architect"
     enforcement_message = "구조 설계가 Critic 위험을 해소하지 못하면 재설계다."
 
+    # 강제 주입 메시지
+    enforcement_message = "실행 가능한 설계만 제출해라. TODO, 생략은 허용되지 않는다."
+
     allowed_actions = [
         "design",               # 설계
         "define_structure",     # 구조 정의

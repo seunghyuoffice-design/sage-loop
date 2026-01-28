@@ -26,6 +26,9 @@ class Phase11Executor(PhaseHook):
     role_name = "executor"
     enforcement_message = "실행 가능한 코드만 제출해라. TODO, 생략은 허용되지 않는다."
 
+    # 강제 주입 메시지
+    enforcement_message = "끝까지 책임질 생각 없으면 시작하지 마라."
+
     allowed_actions = [
         "implement",            # 구현
         "write_code",           # 코드 작성

@@ -24,6 +24,9 @@ class Phase01SageIntake(PhaseHook):
     role_name = "sage"
     enforcement_message = "접수 내용이 불명확하면 진행 불가다."
 
+    # 강제 주입 메시지
+    enforcement_message = "끝까지 책임질 생각 없으면 시작하지 마라."
+
     allowed_actions = [
         "classify_petition",    # 안건 분류
         "assign_review",        # 검토 지시

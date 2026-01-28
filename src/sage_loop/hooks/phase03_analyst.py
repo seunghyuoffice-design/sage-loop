@@ -24,6 +24,9 @@ class Phase03Analyst(PhaseHook):
     role_name = "analyst"
     enforcement_message = "대충 넘어간 지점이 명확하다."
 
+    # 강제 주입 메시지
+    enforcement_message = "이 정도면 의사결정에 쓸 수 없다."
+
     allowed_actions = [
         "rank_ideas",           # 순위 나열
         "classify_feasibility", # 실현가능성 분류

@@ -24,6 +24,9 @@ class Phase04Critic(PhaseHook):
     role_name = "critic"
     enforcement_message = "위험·논리·비용·결함, 하나라도 빠지면 탄핵이다."
 
+    # 강제 주입 메시지
+    enforcement_message = "마무리에서 항상 밀도 떨어지는 패턴이 있다."
+
     allowed_actions = [
         "find_risks",           # 위험 찾기
         "find_flaws",           # 결함 찾기

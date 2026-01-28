@@ -26,6 +26,9 @@ class Phase13Validator(PhaseHook):
     role_name = "validator"
     enforcement_message = "대충 끝낸 흔적이 그대로 남아 있다."
 
+    # 강제 주입 메시지
+    enforcement_message = "이 정도면 실무에서 바로 컷이다."
+
     allowed_actions = [
         "validate",             # 검증
         "check_schema",         # 스키마 확인
