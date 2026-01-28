@@ -1,54 +1,70 @@
 # Sage Loop
 
-A 14-phase autonomous agent orchestration system with **parallel execution support**, inspired by the Korean Joseon Dynasty's Uijeongbu (의정부) deliberation system.
+A **16-phase autonomous agent orchestration system** with **6조 병렬 실행**, inspired by the Korean Joseon Dynasty's Uijeongbu (의정부) deliberation system.
 
 ## Overview
 
-Sage Loop implements a hierarchical decision-making chain where each role has specific responsibilities, enabling thorough analysis, critique, and execution of complex tasks.
+Sage Loop implements a hierarchical decision-making chain modeled after the Joseon Dynasty's Six Ministries (육조) system, enabling thorough analysis, critique, and execution of complex tasks.
 
-**v4 Features:**
-- 🔀 **Parallel Execution**: Non-blocking roles run concurrently
-- 🔒 **File Locking**: Thread-safe state management with `fcntl.flock`
-- ⚡ **Atomic Writes**: Corruption-proof state persistence
+**v5 Features:**
+- 🏛️ **6조 체계**: 이조/호조/예조/병조/형조/공조 병렬 처리
+- 🔀 **Parallel Execution**: 6개 역할 동시 실행
+- 🗣️ **Dokseol Enforcement**: 역할별 품질 강제 메시지
+- 🔒 **File Locking**: Thread-safe state management
+- 🌐 **6 Platform Support**: Claude, Codex, Antigravity, Cursor, OpenCode, VSCode
 
 The Sage (영의정) appears **three times**, following the historical Uijeongbu deliberation flow:
 
-1. **Phase 1**: Accept petition and initiate review ("검토하라")
-2. **Phase 9**: Authorize execution after deliberation ("시행하라")
-3. **Phase 12**: Final approval after validation ("완료 확인")
+1. **Phase 1**: Accept petition ("검토하라")
+2. **Phase 11**: Authorize execution ("시행하라")
+3. **Phase 15**: Final approval ("완료 확인")
 
 ```text
-Sage(접수) → Ideator → Analyst → Critic → Censor → Academy → Architect
-    → [LeftState ∥ RightState] → Sage(허가) → Executor
-    → [Inspector ∥ Validator] → Sage(결재) → Historian → [Reflector ∥ Improver]
+Sage(접수) → [6조 낭청] → [6조 판서] → [6조 승지] → 도승지
+    → 사간원 → 사헌부 → 홍문관 → 도화서
+    → [좌의정 ∥ 우의정] → Sage(허가) → [6조 집행관] → 도승지
+    → [암행어사 ∥ 교서관] → Sage(결재) → [춘추관 ∥ 승문원 ∥ 규장각]
 ```
 
-## Roles (14 Phases, 17 Roles)
+## Roles (16 Phases)
 
 | Phase | Role | Korean | Function | Type |
 | ----- | ---- | ------ | -------- | ---- |
-| 1 | **Sage** | 영의정 | **Accept petition (1st)** - "검토하라" | Sequential |
-| 2 | Ideator | 현인 | Generate 50+ ideas | Sequential |
-| 3 | Analyst | 선지자 | Filter to 5 best ideas | Sequential |
-| 4 | Critic | 비조 | Identify risks (no solutions) | Sequential |
-| 5 | Censor | 파수꾼 | Block rule violations | Sequential |
-| 6 | Academy | 대제학 | Provide academic guidance | Sequential |
-| 7 | Architect | 장인 | Design implementation | Sequential |
-| 8 | LeftState + RightState | 좌의정 + 우의정 | Policy + Technical review | **Parallel** |
-| 9 | **Sage** | 영의정 | **Execution authorization (2nd)** - "시행하라" | Sequential |
-| 10 | Executor | 실행관 | Implement the design | Sequential |
-| 11 | Inspector + Validator | 감찰관 + 검증관 | Inspect + Quality gate | **Parallel** |
-| 12 | **Sage** | 영의정 | **Final approval (3rd)** - "완료 확인" | Sequential |
-| 13 | Historian | 역사관 | Record decisions | Sequential |
-| 14 | Reflector + Improver | 회고관 + 개선관 | Feedback + Improvements | **Parallel** |
+| 1 | **Sage** | 영의정 | **Accept petition** - "검토하라" | Sequential |
+| 2 | ideator-* (x6) | 6조 낭청 | Generate ideas per ministry | **Parallel** |
+| 3 | analyst-* (x6) | 6조 판서 | Analyze and filter ideas | **Parallel** |
+| 4 | seungji-* (x6) | 6조 승지 | Format for deliberation | **Parallel** |
+| 5 | doseungji | 도승지 | Consolidate 6 ministry outputs | Sequential |
+| 6 | sagawon | 사간원 | Remonstrance and critique | Sequential |
+| 7 | saheonbu | 사헌부 | RULES compliance check | Sequential |
+| 8 | hongmungwan | 홍문관 | Academic consultation | Sequential |
+| 9 | dohwaseo | 도화서 | Design implementation | Sequential |
+| 10 | jwauijeong + uuijeong | 좌의정 + 우의정 | Policy + Technical review | **Parallel** |
+| 11 | **Sage** | 영의정 | **Authorize execution** - "시행하라" | Sequential |
+| 12 | executor-* (x6) | 6조 집행관 | Execute per ministry | **Parallel** |
+| 13 | doseungji | 도승지 | Consolidate execution results | Sequential |
+| 14 | amhaeng + gyoseogwan | 암행어사 + 교서관 | Inspection + Validation | **Parallel** |
+| 15 | **Sage** | 영의정 | **Final approval** - "완료 확인" | Sequential |
+| 16 | chunchugwan + seungmunwon + gyujanggak | 춘추관 + 승문원 + 규장각 | Record + Reflect + Improve | **Parallel** |
+
+### 6조 (Six Ministries)
+
+| 조 | Korean | Domain |
+| -- | ------ | ------ |
+| 이조 (ijo) | 吏曹 | Personnel, roles |
+| 호조 (hojo) | 戶曹 | Finance, resources |
+| 예조 (yejo) | 禮曹 | Rites, documentation |
+| 병조 (byeongjo) | 兵曹 | Operations, security |
+| 형조 (hyeongjo) | 刑曹 | Justice, compliance |
+| 공조 (gongjo) | 工曹 | Works, infrastructure |
 
 ## Chain Types
 
-- **FULL**: All 14 phases with 3 parallel groups (complex tasks)
-- **QUICK**: Critic → Architect → Executor → [Inspector ∥ Validator] → Historian
-- **REVIEW**: Critic → Validator
-- **DESIGN**: Ideator → Analyst → Critic → Architect
-- **RESEARCH**: Ideator → Analyst → Academy → Historian
+- **FULL**: All 16 phases with 6조 parallel execution (complex tasks)
+- **QUICK**: 사간원 → 도화서 → Executor → [암행어사 ∥ 교서관] → 춘추관
+- **REVIEW**: [사간원 ∥ 교서관]
+- **DESIGN**: Ideator → Analyst → 사간원 → 도화서
+- **RESEARCH**: [Ideator ∥ 홍문관] → Analyst → 사간원
 
 ## Installation
 
@@ -58,9 +74,10 @@ Sage(접수) → Ideator → Analyst → Critic → Censor → Academy → Archi
 curl -fsSL https://raw.githubusercontent.com/seunghyuoffice-design/sage-loop/main/install.sh | bash
 ```
 
-다른 플랫폼:
+**6 Platforms Supported:**
 
 ```bash
+curl ... | bash -s claude       # Claude Code (default)
 curl ... | bash -s codex        # OpenAI Codex
 curl ... | bash -s antigravity  # Google Antigravity
 curl ... | bash -s opencode     # OpenCode
@@ -119,10 +136,12 @@ Platform-specific configurations are managed through **overlays**:
 
 ```text
 overlays/
-├── claude/
-│   └── model_map.yaml   # Claude models + ultrathink
-└── codex/
-    └── model_map.yaml   # Codex models + reasoning_effort
+├── claude/       # Claude Code
+├── codex/        # OpenAI Codex
+├── antigravity/  # Google Antigravity
+├── cursor/       # Cursor IDE
+├── opencode/     # OpenCode
+└── vscode/       # VS Code Copilot
 ```
 
 ### Model Mapping
@@ -228,9 +247,10 @@ sage-loop/
 
 ## Key Features
 
-- **Parallel Execution**: Non-blocking roles run concurrently (v4)
-- **Concurrency Safe**: File locking with `fcntl.flock` + atomic writes (v4)
-- **Platform Agnostic**: Core skills work on any LLM platform
+- **6조 Parallel Execution**: Six ministries run concurrently (v5)
+- **Dokseol Enforcement**: Quality enforcement messages per role
+- **Concurrency Safe**: File locking with `fcntl.flock` + atomic writes
+- **6 Platform Support**: Claude, Codex, Antigravity, Cursor, OpenCode, VSCode
 - **Overlay System**: Platform-specific model/thinking configuration
 - **Context Isolation**: Each role runs in isolated context via Task tool
 - **Branching**: Dynamic branching based on role outputs
@@ -297,10 +317,24 @@ Reference: [Codex Config Reference](https://developers.openai.com/codex/config-r
 
 The system draws from Korea's Joseon Dynasty (1392-1897) governance:
 
+**의정부 (State Council):**
 - **영의정 (Sage)**: Chief State Councilor - final authority
-- **좌의정 (LeftState)**: Left State Councilor - internal affairs
-- **우의정 (RightState)**: Right State Councilor - external/practical affairs
-- **육조 (Six Ministries)**: Specialized departments under the councilors
+- **좌의정 (jwauijeong)**: Left State Councilor - internal affairs
+- **우의정 (uuijeong)**: Right State Councilor - external affairs
+
+**삼사 (Three Offices):**
+- **사간원 (sagawon)**: Office of Remonstrance - critique and advice
+- **사헌부 (saheonbu)**: Office of Inspector General - rule enforcement
+- **홍문관 (hongmungwan)**: Office of Special Advisors - academic counsel
+
+**육조 (Six Ministries):**
+- **이조**: Personnel | **호조**: Finance | **예조**: Rites
+- **병조**: Military | **형조**: Justice | **공조**: Works
+
+**기타 (Others):**
+- **승정원 (도승지)**: Royal Secretariat - coordination
+- **규장각**: Royal Library - knowledge archive
+- **춘추관**: Office of Annals - historical record
 
 ## License
 
