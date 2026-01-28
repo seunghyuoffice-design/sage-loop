@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.4.0] - 2026-01-28
 
+### Added
+- **Platform-specific installation**: One platform at a time with `--platform` flag
+  - `sage-loop-setup --platform claude` for Claude Code
+  - `sage-loop-setup --platform codex` for Codex
+  - `sage-loop-setup --platform antigravity` for Google Antigravity
+- **Optional dokseol (독설) system**: Motivational messages with `--with-dokseol` flag
+  - Dynamic injection for Claude Code (via hooks)
+  - Static injection for Codex/Antigravity (embedded in SKILL.md)
+  - YAML-based message configuration (overlays/claude/hooks/optional/dokseol_messages.yaml)
+- **Git hooks distribution**: Automatic installation to project's `.git/hooks/`
+  - post-push hook for auto-release on pyproject.toml changes
+  - Distributed via `git-hooks/` directory in package
+
+### Changed
+- Restructured overlays: hooks/ → overlays/claude/hooks/
+- Updated setup.py with git hooks and dokseol support
+- Enhanced apply_overlay.py with dokseol injection logic
+
 ### Removed
 - **Major cleanup**: Removed 32 unused modules (~3000 lines)
   - engine/ (8 modules: branch_handler, chain_executor, compact_checkpoint, context_compactor, parallel_task_runner, role_runner, sage_commander, task_dispatcher)
@@ -15,8 +33,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - adapters/ (2 modules: redis_adapter, __init__)
   - feedback/ (2 modules: feedback_manager, __init__)
   - Root modules: state_manager.py, role_dispatcher.py, ministry_registry.py, schemas.py
+- Removed unused dependencies: redis (not actually used)
 
-### Changed
+### Fixed
 - Minimal core: Only cli/, config.py, session.py remain
 - orchestrator.py is self-contained (816 lines, no external sage_loop dependencies)
 - Simplified __init__.py: removed all exports
