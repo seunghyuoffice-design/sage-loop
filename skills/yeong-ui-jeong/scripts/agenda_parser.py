@@ -93,6 +93,7 @@ def parse_agenda(prompt: str) -> dict:
 
 
 def main():
+    """CLI 엔트리포인트"""
     parser = argparse.ArgumentParser(description="Sage 안건 파서")
     parser.add_argument("prompt", help="sage 명령어 (예: 'sage 풀체인: API 개선')")
     parser.add_argument("--format", choices=["json", "text"], default="json")

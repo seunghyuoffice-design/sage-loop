@@ -307,6 +307,7 @@ class TaskPlanner:
         rec_stack = set()
 
         def dfs(task_id: str) -> bool:
+            """DFS 순환 종속성 검사"""
             visited.add(task_id)
             rec_stack.add(task_id)
 
@@ -368,6 +369,7 @@ class TaskPlanner:
 
 
 def main():
+    """CLI 엔트리포인트"""
     parser = argparse.ArgumentParser(description="Task Planner - 촘촘한 작업 계획 자동 생성")
     parser.add_argument("goal", nargs="?", help='최종 목표 (예: "스킬 3개 수정")')
     parser.add_argument(
