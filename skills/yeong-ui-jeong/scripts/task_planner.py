@@ -15,10 +15,16 @@ Task Planner - 작업 계획 자동 생성 및 촘촘함 강제
 
 import argparse
 import json
+import re
 import sys
 from typing import List, Dict, Optional
 from dataclasses import dataclass, field
 from pathlib import Path
+
+try:
+    import yaml
+except ImportError:
+    yaml = None
 
 
 @dataclass
@@ -110,9 +116,7 @@ class TaskPlanner:
         tasks = []
 
         # 숫자 패턴 감지 (예: "스킬 3개 수정")
-        import re
-
-        number_match = re.search(r"^(.*?)(\d+)개\\s*(.*)$", goal)
+        number_match = re.search(r"^(.*?)(\d+)개\s*(.*)$", goal)
         if number_match:
             count = int(number_match.group(2))
             prefix = number_match.group(1).strip()
@@ -340,7 +344,8 @@ class TaskPlanner:
 
     def export_yaml(self, plan: TaskPlan) -> str:
         """YAML 형식으로 출력"""
-        import yaml
+        if not yaml:
+            raise ImportError("yaml 라이브러리를 설치해주세요: pip install pyyaml")
 
         data = {
             "goal": plan.goal,

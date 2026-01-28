@@ -58,7 +58,7 @@ def parse_agenda(prompt: str) -> dict:
 
     # 패턴 1: "풀체인: 안건" 또는 "풀체인 - 안건"
     for keyword, chain_name in CHAIN_KEYWORDS.items():
-        pattern = rf"^{re.escape(keyword)}[\s::\-]+(.+)$"
+        pattern = rf"^{re.escape(keyword)}[\s::-]+(.+)$"
         match = re.match(pattern, prompt, re.IGNORECASE)
         if match:
             result["chain"] = chain_name
@@ -70,7 +70,7 @@ def parse_agenda(prompt: str) -> dict:
     # 패턴 2: 체인명만 (안건 없음)
     prompt_lower = prompt.lower()
     for keyword, chain_name in CHAIN_KEYWORDS.items():
-        if prompt_lower == keyword or prompt_lower == keyword.lower():
+        if prompt_lower == keyword:
             result["chain"] = chain_name
             result["has_agenda"] = False
             result["prompt_type"] = "chain_only"
