@@ -12,11 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Model mapping: opus→gemini-3-pro-high, sonnet→gemini-3-pro-low, haiku→gemini-3-flash
   - Browser Subagent integration for Academy (홍문관) research phase
   - Task Groups support for parallel execution
-- 77 skills synced to Antigravity global_skills
 
 ### Fixed
-- SKILL.md frontmatter delimiter (------ → ---)
-- 8 skills now properly sync: architect, executor, inspector, validator, reflector, improver, analyst, ideator
+- SKILL.md frontmatter delimiter (------ → ---) for 8 role skills
+- Role skill sync compatibility across platforms
 
 ## [1.3.0] - 2026-01-28
 
