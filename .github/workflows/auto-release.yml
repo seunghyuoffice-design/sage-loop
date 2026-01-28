@@ -1,0 +1,111 @@
+name: Auto Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'pyproject.toml'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 전체 히스토리 가져오기 (태그 비교용)
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Extract version from pyproject.toml
+        id: version
+        run: |
+          VERSION=$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if tag exists
+        id: tag_check
+        run: |
+          if git rev-parse "v${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Extract release notes from CHANGELOG
+        id: changelog
+        if: steps.tag_check.outputs.exists == 'false'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          # CHANGELOG.md에서 해당 버전 섹션 추출
+          NOTES=$(python3 << 'EOF'
+import re
+import sys
+
+version = "${{ steps.version.outputs.version }}"
+
+with open("CHANGELOG.md", "r") as f:
+    content = f.read()
+
+# 버전 섹션 찾기
+pattern = rf"## \[{re.escape(version)}\][^\n]*\n(.*?)(?=\n## \[|\Z)"
+match = re.search(pattern, content, re.DOTALL)
+
+if not match:
+    print(f"Release v{version}")
+    sys.exit(0)
+
+notes = match.group(1).strip()
+
+# 이전 버전 찾기
+versions = re.findall(r"## \[([^\]]+)\]", content)
+try:
+    idx = versions.index(version)
+    if idx + 1 < len(versions):
+        prev_version = versions[idx + 1]
+        notes += f"\n\n---\n\n**Full Changelog**: https://github.com/seunghyuoffice-design/sage-loop/compare/v{prev_version}...v{version}"
+except (ValueError, IndexError):
+    pass
+
+print(notes)
+EOF
+          )
+
+          # GitHub Actions multiline output
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Git tag
+        if: steps.tag_check.outputs.exists == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "${{ steps.version.outputs.tag }}"
+          git push origin "${{ steps.version.outputs.tag }}"
+
+      - name: Create GitHub Release
+        if: steps.tag_check.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          body: ${{ steps.changelog.outputs.notes }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release already exists
+        if: steps.tag_check.outputs.exists == 'true'
+        run: |
+          echo "✓ 릴리즈 ${{ steps.version.outputs.tag }}가 이미 존재합니다"
