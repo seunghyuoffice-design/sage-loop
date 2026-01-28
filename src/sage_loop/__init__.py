@@ -1,6 +1,6 @@
 """Sage Orchestrator - FastAPI 기반 역할 오케스트레이션 서비스"""
 
-__version__ = "1.3.0"  # 영문 README, examples, CONTRIBUTING 추가
+__version__ = "1.3.2"  # 6조 시스템 (Six Ministries) 18개 역할 추가
 
 # Claude Code Integration - YAML Export
 from .engine.compact_checkpoint import (
