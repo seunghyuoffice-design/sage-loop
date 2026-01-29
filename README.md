@@ -43,9 +43,7 @@ curl -fsSL https://raw.githubusercontent.com/seunghyuoffice-design/sage-loop/mai
 
 > Gemini CLI에서 실행되는 풀체인 데모
 
-https://github.com/user-attachments/assets/demo-gemini-fullchain.webm
-
-<video src="assets/demo-gemini-fullchain.webm" controls width="100%"></video>
+![Sage Loop Fullchain Demo](assets/demo-gemini-fullchain.gif)
 
 ---
 
