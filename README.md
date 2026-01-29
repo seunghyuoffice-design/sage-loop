@@ -39,6 +39,14 @@ curl -fsSL https://raw.githubusercontent.com/seunghyuoffice-design/sage-loop/mai
 /sage "API 인증 시스템 구현"
 ```
 
+## Demo
+
+> Gemini CLI에서 실행되는 풀체인 데모
+
+https://github.com/user-attachments/assets/demo-gemini-fullchain.webm
+
+<video src="assets/demo-gemini-fullchain.webm" controls width="100%"></video>
+
 ---
 
 ## 전체 플로우 다이어그램
